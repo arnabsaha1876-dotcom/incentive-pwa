@@ -5,27 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Incentive Calculator</title>
 
-  <!-- PWA -->
-  <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#0f4c81">
-
-  <!-- iOS install -->
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <!-- PWA hooks (keep your manifest.webmanifest and icons/ in the repo root) -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#0f4c81" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
 
   <style>
     :root{
       --brand:#0f4c81;
-      --ok:#2e7d32;
-      --warn:#ef6c00;
-      --danger:#c62828;
       --bg:#f6f8fb;
-      --txt:#1f2937;
       --card:#ffffff;
+      --txt:#1f2937;
       --bar-bg:#e6eaf0;
-      --bar-good:#2e7d32;
-      --bar-amber:#ef6c00;
-      --bar-red:#c62828;
-      --grid:#d7dce3;
     }
     *{box-sizing:border-box}
     html,body{margin:0;padding:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
@@ -35,48 +27,33 @@
     .card{background:var(--card);border:1px solid #e7ebf0;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);padding:14px;margin:10px 0}
     .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     @media (max-width:720px){.row{grid-template-columns:1fr}}
-    label{font-size:13px;color:#475569;margin-bottom:6px;display:block}
-    input[type=number]{width:100%;padding:12px 14px;border:1px solid #cbd5e1;border-radius:10px;font-size:16px}
+    label{font-size:13px;color:#334155;margin-bottom:6px;display:block}
+    .req::after{content:" *";color:#b91c1c}
+    input[type=text]{width:100%;padding:12px 14px;border:1px solid #cbd5e1;border-radius:10px;font-size:16px}
+    input.err{border-color:#ef4444;background:#fff1f2}
+    .err-text{color:#b91c1c;font-size:12px;margin-top:6px;display:none}
     .btn{width:100%;padding:12px 16px;background:var(--brand);color:#fff;border:0;border-radius:10px;font-size:16px}
     .muted{color:#64748b;font-size:12px}
 
-    /* Progress bar with zones */
+    /* Dynamic Progress Bar */
+    .barWrap{margin-top:8px}
     .bar{position:relative;height:18px;border-radius:10px;background:var(--bar-bg);overflow:hidden}
-    .bar .fill{position:absolute;left:0;top:0;height:100%;background:linear-gradient(90deg,#d32f2f,#f57c00,#fbc02d,#7cb342,#388e3c);transition:width .4s ease}
-    .bar .tick{position:absolute;top:0;height:100%;width:2px;background:#fff5;border-left:1px solid #9aa5b1}
-    .bar-labels{display:flex;justify-content:space-between;font-size:11px;color:#64748b;margin-top:6px}
+    .fill{position:absolute;left:0;top:0;height:100%;
+      background:linear-gradient(90deg,#d32f2f,#f57c00,#fbc02d,#7cb342,#388e3c);
+      transition:width .35s ease}
+    .tick{position:absolute;top:0;height:100%;width:2px;background:#ffffff90;border-left:1px solid #9aa5b180}
+    .labels{display:flex;justify-content:space-between;font-size:11px;color:#64748b;margin-top:6px}
+    .callout{border-left:4px solid #ef6c00;background:#fff7ed;color:#7c3f10;padding:8px 10px;border-radius:8px;margin-top:12px;font-size:14px;display:none}
 
-    .callout{border-left:4px solid var(--warn);background:#fff7ed;color:#7c3f10;padding:8px 10px;border-radius:8px;margin-top:12px;font-size:14px}
-
-    /* Speedometer */
-    .gauge-wrap{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    @media (max-width:900px){.gauge-wrap{grid-template-columns:1fr}}
+    /* Speedometer (new geometry from (-80,-20) to (80,-20)) */
     .gauge{position:relative;background:var(--card);border:1px solid #e7ebf0;border-radius:12px;padding:10px;display:flex;flex-direction:column;align-items:center}
     svg{max-width:520px;width:100%;height:auto}
-    .pointer{transform-origin:50% 100%;transition:transform .5s ease}
+    .pointer{transform-origin:0 0;transition:transform .5s ease}
     .legend{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:8px}
     .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid #e5e7eb;border-radius:999px;padding:6px 10px;font-size:12px;background:#fff;cursor:pointer}
     .chip .dot{width:10px;height:10px;border-radius:50%}
 
-    /* Zone details */
-    .zone-details h3{margin:.2rem 0 .4rem}
-    .zone-details p{margin:.2rem 0}
-
-    /* Rewards overlay */
-    .reward{
-      position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.15);z-index:10;
-    }
-    .reward.show{display:grid}
-    .reward .stage{position:relative;width:100%;height:100%}
-    .confetti{position:absolute;top:-10px;width:10px;height:16px;opacity:.9;animation:fall linear forwards}
-    @keyframes fall{
-      to{transform:translateY(110vh) rotate(720deg);opacity:1}
-    }
-    .reward .big-emoji{
-      position:absolute;inset:auto 0 18% 0;text-align:center;font-size:56px;filter:drop-shadow(0 3px 8px rgba(0,0,0,.25))
-    }
-
-    /* Output */
+    /* Results */
     .stat{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed #e5e7eb}
     .stat:last-child{border-bottom:0}
     .stat b{font-size:16px}
@@ -87,7 +64,7 @@
 <body>
   <div class="wrap">
     <header>
-      <img src="icons/icon-192.png" alt="" width="28" height="28" style="border-radius:6px"/>
+      <img src="icons/icon-192.png" alt="" width="28" height="28" />
       <h1>Incentive Calculator</h1>
     </header>
 
@@ -95,106 +72,131 @@
     <div class="card">
       <div class="row">
         <div>
-          <label>🎯 Monthly Target (₹)</label>
-          <input id="target" type="number" inputmode="numeric" placeholder="e.g., 100000" />
+          <label class="req">🎯 Monthly Target (₹)</label>
+          <input id="target" type="text" inputmode="numeric" placeholder="e.g., 1,00,000" />
+          <div class="err-text" id="err-target">Please enter your monthly target.</div>
         </div>
         <div>
-          <label>✅ Achieved So Far (₹)</label>
-          <input id="achieved" type="number" inputmode="numeric" placeholder="e.g., 97000" />
+          <label class="req">✅ Achieved So Far (₹)</label>
+          <input id="achieved" type="text" inputmode="numeric" placeholder="e.g., 97,000" />
+          <div class="err-text" id="err-achieved">Please enter your achieved amount.</div>
         </div>
       </div>
       <div style="margin-top:10px">
         <button class="btn" id="btnCalc">Show My Incentives</button>
       </div>
-      <p class="muted">Tip: Save to your phone home screen for 1‑tap access (Menu → Add to Home Screen).</p>
+      <p class="muted">Numbers auto‑format in Indian style (e.g., 10,00,000). Save to your phone home screen for 1‑tap access.</p>
     </div>
 
-    <!-- Progress -->
+    <!-- Dynamic Progress -->
     <div class="card">
       <h3 style="margin:6px 0 10px">Progress to Incentive</h3>
-      <div class="bar" id="bar">
-        <div class="fill" id="barFill" style="width:0%"></div>
-        <!-- Major ticks at 95,100,115,125,150,200,300 -->
-        <div class="tick" style="left:31.7%"></div><!-- 95/300 -->
-        <div class="tick" style="left:33.3%"></div><!-- 100/300 -->
-        <div class="tick" style="left:38.3%"></div><!-- 115/300 -->
-        <div class="tick" style="left:41.7%"></div><!-- 125/300 -->
-        <div class="tick" style="left:50%"></div><!-- 150/300 -->
-        <div class="tick" style="left:66.7%"></div><!-- 200/300 -->
-        <div class="tick" style="left:100%"></div><!-- 300/300 -->
+      <div class="barWrap">
+        <div class="bar" id="bar">
+          <div class="fill" id="barFill" style="width:0%"></div>
+          <!-- ticks inserted dynamically -->
+        </div>
+        <div class="labels" id="barLabels"></div>
       </div>
-      <div class="bar-labels">
-        <span>0%</span><span>95%</span><span>100%</span><span>115%</span><span>125%</span><span>150%</span><span>200%</span><span>300%+</span>
-      </div>
-      <div id="nearMiss" class="callout" style="display:none">⚠️ <b>Don’t leave money on the table:</b> You’re <span id="missAmt"></span> away from 95%.</div>
+      <div id="nearMiss" class="callout">⚠️ <b>Don’t leave money on the table:</b> You’re <span id="missAmt"></span> away from 95%.</div>
     </div>
 
     <!-- Results -->
     <div class="card" id="results" style="display:none">
       <h3 style="margin:6px 0 12px">Your Incentive Snapshot</h3>
-
-      <div class="stat">
-        <span>Achievement %</span><b id="outPct">—</b>
-      </div>
-      <div class="stat">
-        <span>Current Incentive</span><b id="outIncentive">—</b>
-      </div>
-      <div class="stat">
-        <span>Next Slab @</span><b id="outNextSlab">—</b>
-      </div>
-      <div class="stat">
-        <span>Do more to reach next slab</span><b id="outGap">—</b>
-      </div>
-      <div class="stat">
-        <span>Incentive at next slab</span><b id="outNextInc">—</b>
-      </div>
-
+      <div class="stat"><span>Achievement %</span><b id="outPct">—</b></div>
+      <div class="stat"><span>Current Incentive</span><b id="outIncentive">—</b></div>
+      <div class="stat"><span>Next Slab @</span><b id="outNextSlab">—</b></div>
+      <div class="stat"><span>Do more to reach next slab</span><b id="outGap">—</b></div>
+      <div class="stat"><span>Incentive at next slab</span><b id="outNextInc">—</b></div>
       <p class="muted" id="outMsg" style="margin-top:8px"></p>
     </div>
 
-    <!-- Speedometer & Zone details -->
-    <div class="gauge-wrap">
-      <div class="gauge">
-        <h3 style="margin:6px 0 6px">Incentive Speedometer</h3>
-        <!-- Semicircle 0–300% split into 8 zones (red → green) -->
-        <svg viewBox="0 0 200 120" id="gaugeSvg">
-          <!-- Zones (clickable arcs) -->
-          <g id="zones"></g>
-          <!-- Pointer -->
-          <g transform="translate(100,100)">
-            <polygon id="pointer" class="pointer" points="0,-70 3,0 -3,0" fill="#111"/>
-            <circle cx="0" cy="0" r="5" fill="#111"/>
-          </g>
-        </svg>
-        <div class="legend" id="legend"></div>
-      </div>
-
-      <div class="card zone-details" id="zoneDetails">
-        <h3>Zone details</h3>
-        <p class="muted">Tap a zone above to see min/max achievement in ₹, rate, your gap, and sample incentives.</p>
-        <div id="zoneBody"></div>
-      </div>
+    <!-- Speedometer (new arc endpoints) -->
+    <div class="gauge">
+      <h3 style="margin:6px 0 6px">Incentive Speedometer</h3>
+      <!-- ViewBox centered around (0,0) so the pointer base is at origin -->
+      <svg viewBox="-110 -110 220 180" id="gaugeSvg" aria-label="Speedometer">
+        <g id="zones"></g>
+        <!-- Pointer: base at (0,0), length ~72 -->
+        <g id="pointerGroup" transform="">
+          <polygon id="pointer" class="pointer" points="0,0 4,-6 0,-72 -4,-6" fill="#111"/>
+          <circle cx="0" cy="0" r="5" fill="#111"/>
+        </g>
+        <!-- Optional: baseline from (-80,-20) to (80,-20) -->
+        <!-- <line x1="-80" y1="-20" x2="80" y2="-20" stroke="#cbd5e1" /> -->
+      </svg>
+      <div class="legend" id="legend"></div>
     </div>
-  </div>
-
-  <!-- Rewards overlay -->
-  <div class="reward" id="reward">
-    <div class="stage" id="stage"></div>
-    <div class="big-emoji" id="rewardEmoji">🎉</div>
   </div>
 
   <script>
     /*********************
-     * UTILITIES
+     * FORMAT & PARSE (Indian commas with caret preservation)
      *********************/
-    const INR = new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0});
-    const PCT = (v)=> (Math.round(v*10)/10)+'%';
-    const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+    const INRfmt = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
+    const INR = new Intl.NumberFormat('en-IN', { style:'currency', currency:'INR', maximumFractionDigits:0 });
+    const PCT = v => (Math.round(v*10)/10)+'%';
+    const onlyDigits = s => (s || '').replace(/[^\d]/g,'');
+    const parseINR = s => Number(onlyDigits(s));
 
-    // Slab definition (from your table)
-    // Important: at exactly 95% → 0.5%; 95–100% (exclusive of 95) → 1.0%
+    // Format "Indian" grouping (12,34,56,789)
+    function formatIndian(nStr){
+      const s = onlyDigits(nStr);
+      if (!s) return '';
+      const last3 = s.slice(-3);
+      const head = s.slice(0, -3);
+      const headFmt = head ? head.replace(/\B(?=(\d{2})+(?!\d))/g, ',') : '';
+      return headFmt ? headFmt + ',' + last3 : last3;
+    }
+
+    // Keep caret near where user was typing
+    function attachMask(inputId, errId){
+      const el = document.getElementById(inputId);
+      const err = document.getElementById(errId);
+
+      function digitsBeforeCaret(value, caret){
+        let c=0;
+        for (let i=0;i<caret;i++) if (/\d/.test(value[i])) c++;
+        return c;
+      }
+      function caretFromDigits(formatted, digitsCount){
+        if (digitsCount<=0) return 0;
+        let c=0;
+        for (let i=0;i<formatted.length;i++){
+          if (/\d/.test(formatted[i])) c++;
+          if (c===digitsCount) return i+1;
+        }
+        return formatted.length;
+      }
+
+      el.addEventListener('focus', ()=>{
+        err.style.display='none';
+        el.classList.remove('err');
+      });
+
+      el.addEventListener('input', ()=>{
+        const raw = el.value;
+        const sel = el.selectionStart || raw.length;
+        const dBefore = digitsBeforeCaret(raw, sel);
+        const formatted = formatIndian(raw);
+        el.value = formatted;
+        const newCaret = caretFromDigits(formatted, dBefore);
+        el.setSelectionRange(newCaret, newCaret);
+      });
+
+      // Also reformat on blur just in case
+      el.addEventListener('blur', ()=>{
+        el.value = formatIndian(el.value);
+      });
+    }
+
+    /*********************
+     * SLABS & RATES (your table)
+     *********************/
     const SLABS = [
       { name:'Zone 1',  min:0,   max:95,   rate:0.00, color:'#d32f2f', label:'0–95% (No incentive)' },
+      // Zone 2 special: exactly 95% → 0.5%; >95 & <100 → 1.0%
       { name:'Zone 2',  min:95,  max:100,  rate:0.01, color:'#ef6c00', label:'95–100% (0.5% at exactly 95%)' },
       { name:'Zone 3',  min:100, max:115,  rate:0.025,color:'#f9a825', label:'100–115%' },
       { name:'Zone 4',  min:115, max:125,  rate:0.035,color:'#c0ca33', label:'115–125%' },
@@ -203,12 +205,14 @@
       { name:'Zone 7',  min:200, max:300,  rate:0.06, color:'#43a047', label:'200–300%' },
       { name:'Zone 8',  min:300, max:9999, rate:0.08, color:'#2e7d32', label:'300%+' }
     ];
+    const BOUNDS = [0,95,100,115,125,150,200,300];
+
+    const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 
     function rateFor(pct, achieved, target){
-      const eps=0.0001;
       if (pct < 95) return 0;
-      const exactly95 = Math.abs(achieved - 0.95*target) < 0.5; // ₹ rounding tolerance
-      if (exactly95) return 0.005; // 0.5%
+      const exactly95 = Math.abs(achieved - 0.95*target) < 0.5;
+      if (exactly95) return 0.005;           // 0.5% at exactly 95%
       if (pct >= 95 && pct < 100) return 0.01;
       if (pct >= 100 && pct < 115) return 0.025;
       if (pct >= 115 && pct < 125) return 0.035;
@@ -227,28 +231,143 @@
       if (pct < 150) return 150;
       if (pct < 200) return 200;
       if (pct < 300) return 300;
-      return null; // already at top slab
+      return null;
+    }
+    function slabIndexForPct(pct, exactly95){
+      if (pct < 95) return 0;
+      if (exactly95) return 1;
+      if (pct < 100) return 1;
+      if (pct < 115) return 2;
+      if (pct < 125) return 3;
+      if (pct < 150) return 4;
+      if (pct < 200) return 5;
+      if (pct < 300) return 6;
+      return 7;
     }
 
     /*********************
-     * CORE CALC
+     * DYNAMIC PROGRESS BAR
+     * Rule: Always show from 0% up to the END of the CURRENT slab.
+     * Examples:
+     * - In 95–100%  → ticks: 0, 95, 100, 115
+     * - In 125–150% → ticks: 0, 95, 100, 115, 125, 150
      *********************/
-    const el = (id)=>document.getElementById(id);
+    function ceilingForProgress(pct){
+      if (pct < 95) return 95;
+      if (pct < 100) return 115;
+      if (pct < 115) return 115;
+      if (pct < 125) return 125;
+      if (pct < 150) return 150;
+      if (pct < 200) return 200;
+      if (pct < 300) return 300;
+      return 300;
+    }
+
+    function buildProgressBar(scaleMaxPct){
+      const bar = document.getElementById('bar');
+      const labels = document.getElementById('barLabels');
+      // remove old ticks
+      [...bar.querySelectorAll('.tick')].forEach(n=>n.remove());
+      labels.innerHTML = '';
+
+      // ticks from 0 up to ceiling
+      const ticks = BOUNDS.filter(b => b<=scaleMaxPct);
+      ticks.forEach(p=>{
+        const t = document.createElement('div');
+        t.className='tick';
+        const pctPos = (p/scaleMaxPct)*100;
+        t.style.left = `calc(${pctPos}% - 1px)`;
+        bar.appendChild(t);
+
+        const lab = document.createElement('span');
+        lab.textContent = p+'%';
+        labels.appendChild(lab);
+      });
+    }
+
+    /*********************
+     * NEW SPEEDOMETER GEOMETRY (arc from −80,−20 to 80,−20)
+     *********************/
+    const zonesG = document.getElementById('zones');
+    const legend = document.getElementById('legend');
+    const pointerGroup = document.getElementById('pointerGroup');
+
+    // Geometry constants:
+    // Radius that passes through points (-80,-20) and (80,-20)
+    const RADIUS = Math.hypot(80,20);     // ≈ 82.46
+    const START_DEG = -Math.atan2(20, -80) * 180/Math.PI; // ≈ -166°
+    const END_DEG   = -Math.atan2(20,  80) * 180/Math.PI; // ≈ -14°
+    const SPAN = END_DEG - START_DEG;    // ~152°
+
+    const pctToDeg = p => START_DEG + (clamp(p,0,300)/300)*SPAN;
+
+    function deg2rad(d){return (Math.PI/180)*d}
+    function xy(angleDeg){
+      const a = deg2rad(angleDeg);
+      // math-style coords with origin at center of gauge (SVG y is down, so invert)
+      const x = RADIUS * Math.cos(a);
+      const y = -RADIUS * Math.sin(a);
+      return [x,y];
+    }
+    function pathArc(fromDeg, toDeg){
+      const [sx,sy] = xy(fromDeg), [ex,ey] = xy(toDeg);
+      const largeArc = (toDeg - fromDeg) > 180 ? 1 : 0;
+      return `M ${sx} ${sy} A ${RADIUS} ${RADIUS} 0 ${largeArc} 1 ${ex} ${ey}`;
+    }
+
+    function buildGauge(){
+      zonesG.innerHTML=''; legend.innerHTML='';
+      SLABS.forEach((z,idx)=>{
+        const s = Math.max(z.min, 0);
+        const e = Math.min(z.max, 300);
+        const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+        path.setAttribute('d', pathArc(pctToDeg(s), pctToDeg(e)));
+        path.setAttribute('stroke', z.color);
+        path.setAttribute('stroke-width','14');
+        path.setAttribute('fill','none');
+        zonesG.appendChild(path);
+
+        const chip = document.createElement('div');
+        chip.className='chip';
+        chip.innerHTML = `<span class="dot" style="background:${z.color}"></span>${z.name}`;
+        legend.appendChild(chip);
+      });
+    }
+    function rotatePointerTo(pct){
+      const ang = pctToDeg(pct);
+      pointerGroup.setAttribute('transform', `rotate(${ang})`);
+    }
+
+    /*********************
+     * VALIDATION + CALC
+     *********************/
+    function validateInputs(){
+      const tEl = document.getElementById('target');
+      const aEl = document.getElementById('achieved');
+      const tErr = document.getElementById('err-target');
+      const aErr = document.getElementById('err-achieved');
+      let ok = true;
+
+      if (!onlyDigits(tEl.value)){ tEl.classList.add('err'); tErr.style.display='block'; ok=false; }
+      else { tEl.classList.remove('err'); tErr.style.display='none'; }
+
+      if (!onlyDigits(aEl.value)){ aEl.classList.add('err'); aErr.style.display='block'; ok=false; }
+      else { aEl.classList.remove('err'); aErr.style.display='none'; }
+
+      return ok;
+    }
 
     function calculate(){
-      const target = Number(el('target').value||0);
-      const achieved = Number(el('achieved').value||0);
-      if (!target || target<=0){
-        alert('Please enter a valid Monthly Target (₹).');
-        return;
-      }
+      if (!validateInputs()) return;
 
-      const pct = (achieved/target)*100;
+      const target = parseINR(document.getElementById('target').value);
+      const achieved = parseINR(document.getElementById('achieved').value);
+
+      const pct = target ? (achieved/target)*100 : 0;
       const exactly95 = Math.abs(achieved - 0.95*target) < 0.5;
-      const rate = rateFor(pct, achieved, target);
-      const incentiveNow = Math.floor(achieved * rate);
+      const rateNow = rateFor(pct, achieved, target);
+      const incentiveNow = Math.floor(achieved * rateNow);
 
-      // Next slab
       const nextPct = nextThresholdPct(pct, exactly95);
       let gap=0, atNextIncentive=0;
       if (nextPct!==null){
@@ -258,155 +377,45 @@
         atNextIncentive = Math.floor(nextAbs * rateNext);
       }
 
-      // Fill outputs
-      el('results').style.display='block';
-      el('outPct').innerText = PCT(pct);
-      el('outIncentive').innerText = INR.format(incentiveNow);
-      el('outNextSlab').innerText = nextPct===null ? 'Top slab (300%+)' : `${nextPct}% (${INR.format((nextPct/100)*target)})`;
-      el('outGap').innerText = nextPct===null ? '—' : INR.format(gap);
-      el('outNextInc').innerText = nextPct===null ? INR.format(incentiveNow) : INR.format(atNextIncentive);
+      // Results
+      document.getElementById('results').style.display='block';
+      document.getElementById('outPct').innerText = PCT(pct);
+      document.getElementById('outIncentive').innerText = INR.format(incentiveNow);
+      document.getElementById('outNextSlab').innerText = nextPct===null ? 'Top slab (300%+)' : `${nextPct}% (${INR.format((nextPct/100)*target)})`;
+      document.getElementById('outGap').innerText = nextPct===null ? '—' : INR.format(gap);
+      document.getElementById('outNextInc').innerText = nextPct===null ? INR.format(incentiveNow) : INR.format(atNextIncentive);
 
+      // Near-miss 93–95%
+      const miss = document.getElementById('nearMiss');
       if (pct>=93 && pct<95){
-        el('nearMiss').style.display='block';
-        el('missAmt').innerText = INR.format(Math.ceil(0.95*target - achieved));
-      }else{
-        el('nearMiss').style.display='none';
-      }
+        miss.style.display='block';
+        document.getElementById('missAmt').innerText = INR.format(Math.ceil(0.95*target - achieved));
+      } else { miss.style.display='none'; }
 
-      // Progress bar: scale 0–300%
-      const pctOfScale = clamp((pct/300)*100, 0, 100);
-      el('barFill').style.width = pctOfScale + '%';
+      // ===== Dynamic Progress Bar (0 → end of current slab) =====
+      const ceiling = ceilingForProgress(pct);
+      buildProgressBar(ceiling);
+      const pctOnScale = clamp((pct/ceiling)*100, 0, 100);
+      document.getElementById('barFill').style.width = pctOnScale + '%';
 
-      // Gauge pointer (0% → -90deg, 300% → +90deg)
-      const angle = clamp((pct/300)*180 - 90, -90, 90);
-      el('pointer').style.transform = `rotate(${angle}deg)`;
-
-      // Reward trigger on new slab reached
-      triggerRewardIfSlabAdvanced(pct, exactly95);
-    }
-
-    /*********************
-     * GAUGE (zones + click → details)
-     *********************/
-    const zonesG = el('zones');
-    const legend = el('legend');
-    const zoneBody = el('zoneBody');
-
-    function deg2rad(d){return (Math.PI/180)*d}
-    function polarToXY(cx,cy,r,ang){return [cx + r*Math.cos(deg2rad(ang)), cy + r*Math.sin(deg2rad(ang))]}
-
-    function buildGauge(){
-      zonesG.innerHTML='';
-      legend.innerHTML='';
-      const centerX=100, centerY=100, radius=90;
-      // Map % to degrees: 0%→-90°, 300%→+90°
-      function pctToDeg(p){ return -90 + (p/300)*180 }
-      SLABS.forEach((z,idx)=>{
-        const startDeg = pctToDeg(z.min);
-        const endDeg   = pctToDeg(Math.min(z.max,300));
-        const [sx,sy]  = polarToXY(centerX,centerY,radius,startDeg);
-        const [ex,ey]  = polarToXY(centerX,centerY,radius,endDeg);
-        const largeArc = endDeg - startDeg > 180 ? 1 : 0;
-        const path = document.createElementNS('http://www.w3.org/2000/svg','path');
-        path.setAttribute('d', `M ${sx} ${sy} A ${radius} ${radius} 0 ${largeArc} 1 ${ex} ${ey}`);
-        path.setAttribute('stroke', z.color);
-        path.setAttribute('stroke-width','14');
-        path.setAttribute('fill','none');
-        path.style.cursor='pointer';
-        path.addEventListener('click', ()=> showZoneDetails(idx));
-        zonesG.appendChild(path);
-
-        const c = document.createElement('div');
-        c.className='chip';
-        c.innerHTML = `<span class="dot" style="background:${z.color}"></span>${z.name}`;
-        c.onclick = ()=> showZoneDetails(idx);
-        legend.appendChild(c);
-      });
-    }
-
-    function showZoneDetails(i){
-      const t = Number(el('target').value||0);
-      const a = Number(el('achieved').value||0);
-      const z = SLABS[i];
-      if (!t){ zoneBody.innerHTML = '<p class="muted">Enter Target and Achieved to compute absolute amounts.</p>'; return; }
-      const minAbs = Math.ceil((z.min/100)*t);
-      const maxAbs = (z.max>=300? null : Math.floor((z.max/100)*t));
-      const gap = Math.max(0, minAbs - a);
-      const rateText = (z.min===95 && z.max===100) ? '0.5% at exactly 95%; otherwise 1.0%' : (z.rate*100).toFixed(1)+'%';
-
-      const incAtMin = z.min===0 ? 0 : Math.floor(minAbs * (z.min===95 && z.max===100 ? 0.01 : z.rate));
-      const incAt95 = Math.floor(0.95*t*0.005);
-
-      let html = `<p><b>${z.name}</b> — ${z.label}</p>`;
-      html += `<p>Achievement range: <b>${z.min}%</b> to <b>${z.max>=300?'300%+':z.max+'%'}</b></p>`;
-      html += `<p>Absolute range: <b>${INR.format(minAbs)}</b> to <b>${maxAbs?INR.format(maxAbs):'∞'}</b></p>`;
-      if (z.min===95 && z.max===100){
-        html += `<p>Rate: <b>${rateText}</b> (Example at 95%: ${INR.format(incAt95)})</p>`;
-      }else{
-        html += `<p>Rate: <b>${rateText}</b> (Incentive at zone minimum: ${INR.format(incAtMin)})</p>`;
-      }
-      html += `<p>Gap to enter this zone: <b class="${gap>0?'red':'green'}">${gap>0?INR.format(gap):'You are in / above this zone'}</b></p>`;
-      zoneBody.innerHTML = html;
-    }
-
-    /*********************
-     * REWARDS (different visuals per slab)
-     *********************/
-    let lastSlabIdx = -1;
-    function slabIndexForPct(pct, exactly95){
-      if (pct < 95) return 0;                 // Zone 1
-      if (exactly95) return 1;                // Special case: 95% (still Zone 2)
-      if (pct < 100) return 1;                // Zone 2
-      if (pct < 115) return 2;
-      if (pct < 125) return 3;
-      if (pct < 150) return 4;
-      if (pct < 200) return 5;
-      if (pct < 300) return 6;
-      return 7;
-    }
-    const REWARD_EMOJIS = ['🙌','🎉','👏','🥉','🥈','🥇','🏆','👑'];
-
-    function triggerRewardIfSlabAdvanced(pct, exactly95){
-      const idx = slabIndexForPct(pct, exactly95);
-      if (idx>lastSlabIdx){
-        lastSlabIdx = idx;
-        runReward(idx);
-      }
-    }
-
-    function runReward(idx){
-      const overlay = el('reward');
-      const stage = el('stage');
-      const emoji = el('rewardEmoji');
-      stage.innerHTML='';
-      emoji.textContent = REWARD_EMOJIS[idx] || '🎉';
-      overlay.classList.add('show');
-
-      // Spawn confetti (more for higher slabs)
-      const colors = ['#ff5252','#ffd740','#69f0ae','#40c4ff','#b388ff','#ff8a80'];
-      const count = 60 + idx*20;
-      for (let i=0;i<count;i++){
-        const d = document.createElement('div');
-        d.className='confetti';
-        d.style.left = Math.random()*100 + 'vw';
-        d.style.background = colors[i % colors.length];
-        d.style.transform = `translateY(-10px) rotate(${Math.random()*360}deg)`;
-        d.style.animationDuration = (2 + Math.random()*2) + 's';
-        d.style.animationDelay = (Math.random()*0.6)+'s';
-        stage.appendChild(d);
-      }
-
-      // Auto hide
-      setTimeout(()=> overlay.classList.remove('show'), 2200);
+      // ===== Speedometer pointer =====
+      rotatePointerTo(pct);
     }
 
     /*********************
      * INIT
      *********************/
-    buildGauge();
-    document.getElementById('btnCalc').addEventListener('click', ()=>{ calculate(); showZoneDetails(0); });
+    // Indian-number masks (with caret preservation)
+    attachMask('target','err-target');
+    attachMask('achieved','err-achieved');
 
-    // PWA SW
+    // Build gauge zones once
+    buildGauge();
+
+    // Calculate on button click
+    document.getElementById('btnCalc').addEventListener('click', calculate);
+
+    // PWA Service Worker
     if ('serviceWorker' in navigator){
       navigator.serviceWorker.register('./service-worker.js');
     }
