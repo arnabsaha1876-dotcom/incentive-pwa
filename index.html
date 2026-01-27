@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
   <title>Incentive Calculator</title>
 
+  <!-- Keep your existing PWA hooks as-is -->
   manifest.webmanifest
   <meta name="theme-color" content="#0f4c81"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -32,7 +33,7 @@
     .btn{width:100%;padding:12px 16px;background:var(--brand);color:#fff;border:0;border-radius:10px;font-size:16px}
     .muted{color:var(--muted);font-size:12px}
 
-    /* Progress bar */
+    /* ===== Dynamic Progress Bar (unchanged logic, accurate tick placement) ===== */
     .barWrap{margin-top:8px}
     .bar{position:relative;height:18px;border-radius:10px;background:var(--bar-bg);overflow:hidden}
     .fill{position:absolute;left:0;top:0;height:100%;
@@ -44,7 +45,7 @@
 
     .callout{border-left:4px solid #ef6c00;background:#fff7ed;color:#7c3f10;padding:8px 10px;border-radius:8px;margin-top:12px;font-size:14px;display:none}
 
-    /* Speedometer */
+    /* ===== Speedometer (fixed) ===== */
     .gauge{position:relative;background:var(--card);border:1px solid #e7ebf0;border-radius:12px;padding:10px;display:flex;flex-direction:column;align-items:center}
     svg{max-width:520px;width:100%;height:auto}
     .pointer{transform-origin:0 0;transition:transform .5s ease}
@@ -119,13 +120,14 @@
       <p class="muted" id="outMsg" style="margin-top:8px"></p>
     </div>
 
-    <!-- Speedometer -->
+    <!-- Speedometer (fixed zones + precise needle) -->
     <div class="gauge">
       <h3 style="margin:6px 0 6px">Incentive Speedometer</h3>
       <svg viewBox="-110 -120 220 170" id="gaugeSvg" aria-label="Speedometer">
         <g id="zones"></g>
+        <!-- Needle: horizontal line → we rotate the group to exact angle -->
         <g id="pointerGroup" style="pointer-events:none">
-          <polygon id="pointer" class="pointer" points="0,0 4,-6 0,-72 -4,-6" fill="#111"/>
+          <line id="needle" x1="0" y1="0" x2="72" y2="0" stroke="#111" stroke-width="4" stroke-linecap="round"/>
           <circle cx="0" cy="0" r="5" fill="#111"/>
         </g>
       </svg>
@@ -144,7 +146,7 @@
   </div>
 
   <script>
-    /* Indian number mask */
+    /* ========== Indian number mask (caret preserved) ========== */
     const INRfmt = new Intl.NumberFormat('en-IN',{maximumFractionDigits:0});
     const INR = new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0});
     const PCT = v => (Math.round(v*10)/10)+'%';
@@ -157,7 +159,8 @@
       return headFmt ? headFmt+','+last3 : last3;
     }
     function attachMask(inputId, errId){
-      const el=document.getElementById(inputId), err=document.getElementById(errId);
+      const el=document.getElementById(inputId);
+      const err=document.getElementById(errId);
       function digitsBeforeCaret(v,c){let d=0;for(let i=0;i<c;i++) if(/\d/.test(v[i])) d++;return d;}
       function caretFromDigits(f,d){if(d<=0) return 0;let c=0;for(let i=0;i<f.length;i++){if(/\d/.test(f[i])) c++; if(c===d) return i+1;} return f.length;}
       el.addEventListener('focus',()=>{err.style.display='none';el.classList.remove('err');});
@@ -168,7 +171,7 @@
       el.addEventListener('blur',()=>{el.value=formatIndian(el.value);});
     }
 
-    /* Slabs (updated colors) */
+    /* ========== Slabs (distinct red → green) ========== */
     const SLABS = [
       { name:'Zone 1',  min:0,   max:95,   rate:0.00, color:'#D32F2F', label:'0–95% (No incentive)' },
       { name:'Zone 2',  min:95,  max:100,  rate:0.01, color:'#F57C00', label:'95–100% (0.5% at exactly 95%)' },
@@ -182,16 +185,16 @@
     const BOUNDS=[0,95,100,115,125,150,200,300];
     const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 
-    function rateFor(p,a,t){
-      if (a/t*100 < 95) return 0;
-      if (Math.abs(a - 0.95*t) < 0.5) return 0.005;
-      const p=a/t*100;
-      if (p < 100) return 0.01;
-      if (p < 115) return 0.025;
-      if (p < 125) return 0.035;
-      if (p < 150) return 0.04;
-      if (p < 200) return 0.05;
-      if (p < 300) return 0.06;
+    function rateFor(pct, achieved, target){
+      if (pct < 95) return 0;
+      const exactly95 = Math.abs(achieved - 0.95*target) < 0.5;
+      if (exactly95) return 0.005;
+      if (pct < 100) return 0.01;
+      if (pct < 115) return 0.025;
+      if (pct < 125) return 0.035;
+      if (pct < 150) return 0.04;
+      if (pct < 200) return 0.05;
+      if (pct < 300) return 0.06;
       return 0.08;
     }
     function nextThresholdPct(pct, exactly95){
@@ -217,7 +220,7 @@
       return 7;
     }
 
-    /* Progress bar */
+    /* ========== Dynamic Progress Bar (unchanged behavior) ========== */
     function ceilingForProgress(pct){
       if (pct < 95) return 95;
       if (pct < 100) return 115;
@@ -239,37 +242,52 @@
       });
     }
 
-    /* ===== Speedometer (fixed) ===== */
+    /* ========== Speedometer (FIXED): 8 o’clock → 12 → 4 o’clock ========== */
     const zonesG=document.getElementById('zones');
     const legend=document.getElementById('legend');
     const pointerGroup=document.getElementById('pointerGroup');
 
-    const RADIUS=Math.hypot(80,20);                       // ≈ 82.46
-    const START_DEG=Math.atan2(-20,-80)*180/Math.PI;      // ≈ -166°
-    const END_DEG  =Math.atan2(-20, 80)*180/Math.PI;      // ≈  -14°
-    const pctToDeg = p => START_DEG + (Math.max(0,Math.min(300,p))/300)*(END_DEG-START_DEG);
-
-    function deg2rad(d){return (Math.PI/180)*d;}
-    function xy(d){const a=deg2rad(d); return [RADIUS*Math.cos(a), RADIUS*Math.sin(a)];}
-    function arcPath(fromDeg,toDeg){
-      const [sx,sy]=xy(fromDeg), [ex,ey]=xy(toDeg);
-      const delta=toDeg-fromDeg, largeArc=Math.abs(delta)>180?1:0, sweep=delta>=0?1:0;
+    // Arc must pass through (-80,-20) (start) and (80,-20) (end)
+    const RADIUS = Math.hypot(80, 20);                 // ≈ 82.46
+    // Use SVG coordinate angles: x right, y down. atan2(y, x)
+    const START_DEG = Math.atan2(-20, -80) * 180/Math.PI;  // ≈ -166°  (≈ 194° mod 360 → ~8 o'clock)
+    const END_DEG   = Math.atan2(-20,  80) * 180/Math.PI;  // ≈  -14°  (≈ 346° mod 360 → ~4 o'clock)
+    // Map 0..300% to angles along the arc (clockwise sweep from start to end)
+    function pctToDeg(pct){
+      const p = clamp(pct, 0, 300);
+      return START_DEG + (p/300) * (END_DEG - START_DEG);
+    }
+    function deg2rad(d){ return (Math.PI/180)*d; }
+    function xy(angleDeg){
+      const a = deg2rad(angleDeg);
+      // SVG coords (no y-inversion): (x = R cos a, y = R sin a)
+      return [ RADIUS*Math.cos(a), RADIUS*Math.sin(a) ];
+    }
+    function arcPath(fromDeg, toDeg){
+      const [sx, sy] = xy(fromDeg), [ex, ey] = xy(toDeg);
+      const delta = toDeg - fromDeg;            // positive → clockwise along this arc
+      const largeArc = Math.abs(delta) > 180 ? 1 : 0;
+      const sweep    = delta >= 0 ? 1 : 0;      // 1 = clockwise, 0 = CCW
       return `M ${sx} ${sy} A ${RADIUS} ${RADIUS} 0 ${largeArc} ${sweep} ${ex} ${ey}`;
     }
     function buildGauge(){
       zonesG.innerHTML=''; legend.innerHTML='';
       SLABS.forEach((z,idx)=>{
-        let sPct=Math.max(0,z.min), ePct=Math.min(300,z.max);
-        if (z.min>=300){ sPct=296; ePct=300; } // visible cap for 300%+
-        const sAng=pctToDeg(sPct), eAng=pctToDeg(ePct);
+        // clamp to 0..300; draw a visible cap for 300%+
+        let sPct = Math.max(0, z.min);
+        let ePct = Math.min(300, z.max);
+        if (z.min >= 300){ sPct = 296; ePct = 300; } // tiny cap
+
+        const sAng = pctToDeg(sPct);
+        const eAng = pctToDeg(ePct);
 
         const path=document.createElementNS('http://www.w3.org/2000/svg','path');
-        path.setAttribute('d',arcPath(sAng,eAng));
-        path.setAttribute('stroke',z.color);
+        path.setAttribute('d', arcPath(sAng, eAng));
+        path.setAttribute('stroke', z.color);
         path.setAttribute('stroke-width','14');
         path.setAttribute('fill','none');
         path.style.cursor='pointer';
-        path.addEventListener('click',()=>showZoneDetails(idx));
+        path.addEventListener('click', ()=> showZoneDetails(idx));
         zonesG.appendChild(path);
 
         const chip=document.createElement('div');
@@ -280,8 +298,8 @@
       });
     }
     function rotatePointerTo(pct){
-      const ang=pctToDeg(pct);
-      pointerGroup.setAttribute('transform',`rotate(${ang})`);
+      const ang = pctToDeg(pct);   // degrees in SVG coordinate system
+      pointerGroup.setAttribute('transform', `rotate(${ang})`);
     }
 
     function showZoneDetails(i){
@@ -290,6 +308,7 @@
       const b=document.getElementById('zoneBody');
       const z=SLABS[i];
       if (!t){ b.innerHTML='Enter Target & Achieved to compute absolute amounts.'; return; }
+
       const minAbs=Math.ceil((z.min/100)*t);
       const maxAbs=(z.max>=300? null : Math.floor((z.max/100)*t));
       const gap=Math.max(0,minAbs-a);
@@ -306,7 +325,7 @@
       b.innerHTML=html;
     }
 
-    /* Rewards */
+    /* ========== Rewards (unchanged behavior, now reliable) ========== */
     let lastSlabIdx=-1;
     const REWARD_EMOJIS=['💪','🎉','👏','🥉','🥈','🥇','🏆','👑'];
     function triggerRewardIfSlabAdvanced(pct, exactly95){
@@ -343,7 +362,7 @@
       setTimeout(()=> overlay.classList.remove('show'),2200);
     }
 
-    /* Validation + Calc */
+    /* ========== Validation + Calculation (unchanged) ========== */
     function validateInputs(){
       const tEl=document.getElementById('target');
       const aEl=document.getElementById('achieved');
@@ -383,33 +402,33 @@
       document.getElementById('outGap').innerText = nextPct===null ? '—' : INR.format(gap);
       document.getElementById('outNextInc').innerText = nextPct===null ? INR.format(incentiveNow) : INR.format(atNextIncentive);
 
-      // Near-miss 93–95
+      // Near-miss
       const miss=document.getElementById('nearMiss');
       if (pct>=93 && pct<95){ miss.style.display='block'; document.getElementById('missAmt').innerText=INR.format(Math.ceil(0.95*target-achieved)); }
       else miss.style.display='none';
 
-      // Dynamic progress bar
+      // Dynamic progress bar (0 → end of current slab)
       const ceiling = (pct<95)?95 : (pct<100||pct<115?115 : (pct<125?125 : (pct<150?150 : (pct<200?200 : 300))));
       buildProgressBar(ceiling);
       document.getElementById('barFill').style.width = Math.min(pct/ceiling,1)*100 + '%';
 
-      // Gauge pointer
+      // Gauge pointer to exact % (0..300)
       rotatePointerTo(pct);
 
       // Rewards
       triggerRewardIfSlabAdvanced(pct, exactly95);
     }
 
-    /* Init */
+    /* ========== Init (unchanged) ========== */
     attachMask('target','err-target');
     attachMask('achieved','err-achieved');
     buildGauge();
     document.getElementById('btnCalc').addEventListener('click', calculate);
 
+    // SW registration unchanged
     if ('serviceWorker' in navigator){
       navigator.serviceWorker.register('./service-worker.js');
     }
   </script>
 </body>
 </html>
-``
