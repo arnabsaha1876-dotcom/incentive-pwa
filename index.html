@@ -12,13 +12,13 @@
 
  
 
-  <!-- PWA & Icons (kept as in your working build) -->
+  <!-- Proper PWA & Icons -->
 
-  manifest.webmanifest
+  <link rel="manifest" href="manifest.webmanifest">
 
-  icons/icon-192.png
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 
-  icons/icon-192.png
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
 
   <meta name="theme-color" content="#0f4c81"/>
 
@@ -92,8 +92,6 @@
 
  
 
-    /* Labels container: two rows for collision avoidance */
-
     .labelsAbs{position:relative;height:30px;margin-top:6px}
 
     .labelsAbs span{
@@ -116,7 +114,7 @@
 
  
 
-    /* ===== Incentive Slabs gauge ===== */
+    /* ===== Incentive Slabs (gauge) ===== */
 
     .gauge{position:relative;background:var(--card);border:1px solid #e7ebf0;border-radius:12px;padding:10px;display:flex;flex-direction:column;align-items:center}
 
@@ -166,21 +164,13 @@
 
     /* ===== Password Gate Overlay (soft) ===== */
 
-    .gate{
+    .gate{position:fixed; inset:0; background:linear-gradient(180deg, rgba(15,76,129,.08), rgba(0,0,0,.05));
 
-      position:fixed; inset:0; background:linear-gradient(180deg, rgba(15,76,129,.08), rgba(0,0,0,.05));
+      display:grid; place-items:center; z-index:9999; padding:16px;}
 
-      display:grid; place-items:center; z-index:9999; padding:16px;
+    .gate .panel{width:100%; max-width:420px; background:#fff; border:1px solid #e7ebf0; border-radius:12px;
 
-    }
-
-    .gate .panel{
-
-      width:100%; max-width:420px; background:#fff; border:1px solid #e7ebf0; border-radius:12px;
-
-      box-shadow:0 6px 30px rgba(0,0,0,.08); padding:16px 16px 18px;
-
-    }
+      box-shadow:0 6px 30px rgba(0,0,0,.08); padding:16px 16px 18px;}
 
     .gate h2{margin:6px 0 10px; font-size:20px}
 
@@ -194,7 +184,7 @@
 
  
 
-    /* ===== New table ===== */
+    /* ===== Milestone Table ===== */
 
     .tableWrap{overflow:auto}
 
@@ -211,6 +201,28 @@
     table.milestone tbody tr:nth-child(even){background:#fafafa}
 
     .noteHdr{margin:4px 0 10px; color:#475569; font-size:13px}
+
+    .slCell{width:52px; text-align:center; font-weight:600}
+
+ 
+
+    /* slab color shades (amber → green) used only from current slab onwards */
+
+    .shade1{background:#F7BD72 !important}
+
+    .shade2{background:#FAD481 !important}
+
+    .shade3{background:#FCE68A !important}
+
+    .shade4{background:#D9F99D !important}
+
+    .shade5{background:#BBF7D0 !important}
+
+    .shade6{background:#86EFAC !important}
+
+    .shade7{background:#4ADE80 !important}
+
+    .shade8{background:#22C55E !important}
 
   </style>
 
@@ -256,7 +268,7 @@
 
     <header>
 
-      icons/icon-192.png
+      <img src="icons/icon-192.png" alt="logo" class="logo">
 
       <h1>Incentive Calculator</h1>
 
@@ -352,7 +364,7 @@
 
  
 
-    <!-- Results (Next Slab row removed earlier) -->
+    <!-- Results -->
 
     <div class="card" id="results" style="display:none">
 
@@ -372,7 +384,7 @@
 
  
 
-    <!-- Incentive Slabs -->
+    <!-- Incentive Slabs (gauge) -->
 
     <div class="gauge">
 
@@ -410,7 +422,7 @@
 
  
 
-    <!-- ===== NEW: Milestones & Incentives Table ===== -->
+    <!-- Milestones & Minimum Incentives Table -->
 
     <div class="card">
 
@@ -426,19 +438,17 @@
 
             <tr>
 
-              <th style="width:50%">Next Milestone</th>
+              <th class="slCell">Sl.</th>
 
-              <th style="width:50%">Incentive You can unlock</th>
+              <th>Next Milestone</th>
+
+              <th>Incentive You can unlock</th>
 
             </tr>
 
           </thead>
 
-          <tbody id="milestoneBody">
-
-            <!-- Rows inserted dynamically -->
-
-          </tbody>
+          <tbody id="milestoneBody"></tbody>
 
         </table>
 
@@ -472,17 +482,9 @@
 
        ============================ */
 
- 
-
-    // ADMIN: set your password here in plain text (4–64 chars recommended)
-
-    const PASSWORD = "Tanmoy";   // ← change this to your actual password
-
- 
+    const PASSWORD = "Tanmoy";   // ← admin: change here
 
     const SESSION_KEY = "ic_unlocked_simple_v1";
-
- 
 
     function showSimpleGate(){
 
@@ -494,8 +496,6 @@
 
       gate.style.display = 'grid';
 
- 
-
       const input = document.getElementById('pwdInput');
 
       const btn   = document.getElementById('pwdBtn');
@@ -503,8 +503,6 @@
       const clr   = document.getElementById('pwdClear');
 
       const err   = document.getElementById('pwdErr');
-
- 
 
       btn.onclick = () => {
 
@@ -520,11 +518,7 @@
 
           initializeApp();
 
-        } else {
-
-          err.style.display = 'block';
-
-        }
+        } else { err.style.display = 'block'; }
 
       };
 
@@ -536,7 +530,7 @@
 
     /* ============================
 
-       EXISTING APP LOGIC (same)
+       APP LOGIC
 
        ============================ */
 
@@ -586,21 +580,17 @@
 
     }
 
- 
-
-    // Lakh short formatter (up to 2 decimals)
-
     function formatLakhShort(valueInRupees){
 
-      const x = valueInRupees / 100000; // lakhs
+      const x = valueInRupees / 100000;
 
       if (x === 0) return '0';
 
       let s = x.toFixed(2);
 
-      s = s.replace(/\.?0+$/, '');       // trim trailing zeros
+      s = s.replace(/\.?0+$/, '');
 
-      if (x > 0 && x < 1) s = s.replace(/^0/, ''); // drop leading zero for <1
+      if (x > 0 && x < 1) s = s.replace(/^0/, '');
 
       return s;
 
@@ -632,13 +622,21 @@
 
  
 
+    /* ==== 95% edge rules ==== */
+
+    function isExactly95(achieved, target){
+
+      const exact95 = Math.round(0.95*target);
+
+      return achieved === exact95;            // e.g., 95,000 on 1,00,000
+
+    }
+
     function rateFor(pct, achieved, target){
 
       if (pct < 95) return 0;
 
-      const exactly95 = Math.abs(achieved - 0.95*target) < 0.5;
-
-      if (exactly95) return 0.005;
+      if (isExactly95(achieved, target)) return 0.005; // 0.5%
 
       if (pct < 100) return 0.01;
 
@@ -656,33 +654,35 @@
 
     }
 
-    function nextThresholdPct(pct, exactly95){
+    // Next milestone absolute amount (₹)
 
-      if (pct < 95) return 95;
+    function nextMilestoneAbs(pct, achieved, target){
 
-      if (exactly95) return 100;
+      if (pct < 95) return Math.ceil(0.95*target);   // to enter 95%
 
-      if (pct < 100) return 100;
+      if (isExactly95(achieved, target)) return achieved + 1;  // +₹1 to enter 95–100
 
-      if (pct < 115) return 115;
+      if (pct < 100) return Math.ceil(1.00*target);
 
-      if (pct < 125) return 125;
+      if (pct < 115) return Math.ceil(1.15*target);
 
-      if (pct < 150) return 150;
+      if (pct < 125) return Math.ceil(1.25*target);
 
-      if (pct < 200) return 200;
+      if (pct < 150) return Math.ceil(1.50*target);
 
-      if (pct < 300) return 300;
+      if (pct < 200) return Math.ceil(2.00*target);
+
+      if (pct < 300) return Math.ceil(3.00*target);
 
       return null;
 
     }
 
-    function slabIndexForPct(pct, exactly95){
+    function slabIndexForPct(pct, achieved, target){
 
-      if (pct < 95) return 0;
+      if (pct < 95) return -1;                     // no slab yet
 
-      if (exactly95) return 1;
+      if (isExactly95(achieved, target)) return 0; // slab 1
 
       if (pct < 100) return 1;
 
@@ -700,13 +700,11 @@
 
     }
 
- 
-
-    function getNextSlabBounds(pct, exactly95){
+    function getNextSlabBounds(pct, achieved, target){
 
       if (pct < 95)   return {nmin:95,  nmax:100};
 
-      if (exactly95)  return {nmin:100, nmax:115};
+      if (isExactly95(achieved, target)) return {nmin:95.0001, nmax:100}; // for bar: 95%→95%+ε
 
       if (pct < 100)  return {nmin:100, nmax:115};
 
@@ -726,7 +724,7 @@
 
  
 
-    // Arrange labels over two rows to avoid overlapping
+    /* ===== Progress absolute bar (3 segments) ===== */
 
     function arrangeLabelCollisions(container, items){
 
@@ -734,51 +732,35 @@
 
       const minGapPx = 48;
 
- 
+      const pts = items.map(it => ({ el: it.el, x: (it.leftPercent/100)*width, leftPercent: it.leftPercent }))
 
-      const pts = items.map(it => ({
+                       .sort((a,b)=>a.x - b.x);
 
-        el: it.el,
-
-        x: (it.leftPercent/100) * width,
-
-        leftPercent: it.leftPercent
-
-      })).sort((a,b)=>a.x - b.x);
-
- 
-
-      let lastXRow0 = -Infinity, lastXRow1 = -Infinity;
-
-      pts.forEach(p => {
-
-        if (p.x - lastXRow0 >= minGapPx) { p.row = 0; lastXRow0 = p.x; }
-
-        else if (p.x - lastXRow1 >= minGapPx) { p.row = 1; lastXRow1 = p.x; }
-
-        else { p.row = (lastXRow1 <= lastXRow0) ? 1 : 0; }
-
-      });
-
- 
-
-      pts.forEach(p => { p.el.style.top = (p.row === 0 ? '0px' : '16px'); });
-
- 
+      let last0=-1e9, last1=-1e9;
 
       pts.forEach(p=>{
 
-        if (p.leftPercent <= 0.5) { p.el.style.transform = 'translateX(0)'; p.el.style.left = '0%'; }
+        if (p.x - last0 >= minGapPx) { p.row=0; last0=p.x; }
 
-        else if (p.leftPercent >= 99.5) { p.el.style.transform = 'translateX(-100%)'; p.el.style.left = '100%'; }
+        else if (p.x - last1 >= minGapPx) { p.row=1; last1=p.x; }
 
-        else { p.el.style.transform = 'translateX(-50%)'; }
+        else { p.row = (last1<=last0)?1:0; }
+
+      });
+
+      pts.forEach(p=>{ p.el.style.top = p.row===0?'0px':'16px'; });
+
+      pts.forEach(p=>{
+
+        if (p.leftPercent <= 0.5){ p.el.style.transform='translateX(0)'; p.el.style.left='0%'; }
+
+        else if (p.leftPercent >= 99.5){ p.el.style.transform='translateX(-100%)'; p.el.style.left='100%'; }
+
+        else { p.el.style.transform='translateX(-50%)'; }
 
       });
 
     }
-
- 
 
     function buildAbsoluteProgress(target, achieved){
 
@@ -788,8 +770,6 @@
 
       const seg3 = document.getElementById('seg3');
 
- 
-
       const t0 = document.getElementById('tick0');
 
       const tA = document.getElementById('tickA');
@@ -797,8 +777,6 @@
       const tN1= document.getElementById('tickN1');
 
       const tN2= document.getElementById('tickN2');
-
- 
 
       const l0 = document.getElementById('lab0');
 
@@ -812,11 +790,7 @@
 
       const pct = target ? (achieved/target)*100 : 0;
 
-      const exactly95 = Math.abs(achieved - 0.95*target) < 0.5;
-
- 
-
-      const {nmin, nmax} = getNextSlabBounds(pct, exactly95);
+      const {nmin, nmax} = getNextSlabBounds(pct, achieved, target);
 
  
 
@@ -824,9 +798,9 @@
 
       const Aach = Math.max(0, achieved);
 
-      const Amin = Math.ceil((nmin/100)*target);
+      const Amin = (nmin>300? Math.ceil(3.00*target) : Math.ceil((nmin/100)*target));
 
-      const Amax = Math.ceil((nmax/100)*target);
+      const Amax = Math.ceil((Math.min(nmax,300)/100)*target);
 
  
 
@@ -846,8 +820,6 @@
 
  
 
-      // Segments
-
       seg1.style.left = `${left1}%`; seg1.style.width = `${Math.max(0, left2-left1)}%`;
 
       seg2.style.left = `${left2}%`; seg2.style.width = `${Math.max(0, left3-left2)}%`;
@@ -855,8 +827,6 @@
       seg3.style.left = `${left3}%`; seg3.style.width = `${Math.max(0, 100-left3)}%`;
 
  
-
-      // Ticks
 
       t0.style.left  = `${left1}%`;
 
@@ -868,25 +838,17 @@
 
  
 
-      // Labels (Lakhs up to 2 decimals). Keep "300%+" only if truly in final zone.
-
       l0.style.left = `${left1}%`; l0.textContent = formatLakhShort(0);
 
       lA.style.left = `${left2}%`; lA.textContent = formatLakhShort(clampAch);
 
       lN1.style.left = `${left3}%`; lN1.textContent = formatLakhShort(Amin);
 
-      lN2.style.left = `100%`;
-
-      lN2.textContent = (nmax===300 && pct>=300) ? '300%+' : formatLakhShort(Amax);
+      lN2.style.left = `100%`;      lN2.textContent = (nmax===300 && pct>=300) ? '300%+' : formatLakhShort(Amax);
 
  
 
-      // Collision avoidance (two-row layout)
-
-      const labelsContainer = document.getElementById('barLabels');
-
-      arrangeLabelCollisions(labelsContainer, [
+      arrangeLabelCollisions(document.getElementById('barLabels'), [
 
         { el: l0,  leftPercent: left1 },
 
@@ -902,7 +864,7 @@
 
  
 
-    // Gauge
+    /* ===== Gauge ===== */
 
     const zonesG=document.getElementById('zones');
 
@@ -910,17 +872,13 @@
 
     const pointerGroup=document.getElementById('pointerGroup');
 
- 
-
     const RADIUS = Math.hypot(80, 20);
 
     const START_DEG = Math.atan2(-20, -80) * 180/Math.PI;
 
     const END_DEG   = Math.atan2(-20,  80) * 180/Math.PI;
 
-    const clampPct = v => Math.max(0, Math.min(300, v));
-
-    function pctToDeg(pct){ const p=clampPct(pct); return START_DEG + (p/300)*(END_DEG - START_DEG); }
+    function pctToDeg(pct){ const p=Math.max(0,Math.min(300,pct)); return START_DEG + (p/300)*(END_DEG-START_DEG); }
 
     function deg2rad(d){ return (Math.PI/180)*d; }
 
@@ -944,7 +902,7 @@
 
         let sPct=Math.max(0,z.min), ePct=Math.min(300,z.max);
 
-        if (z.min>=300){ sPct=296; ePct=300; } // tiny cap for 300%+
+        if (z.min>=300){ sPct=296; ePct=300; }
 
         const sAng=pctToDeg(sPct), eAng=pctToDeg(ePct);
 
@@ -980,17 +938,9 @@
 
     }
 
-    function rotatePointerTo(pct){
-
-      const ang=pctToDeg(pct);
-
-      pointerGroup.setAttribute('transform',`rotate(${ang})`);
-
-    }
+    function rotatePointerTo(pct){ pointerGroup.setAttribute('transform',`rotate(${pctToDeg(pct)})`); }
 
  
-
-    // Zone details (privacy-trimmed)
 
     function showZoneDetails(i){
 
@@ -1004,29 +954,19 @@
 
       if (!t){ b.innerHTML='Enter Target & Achieved to compute values.'; return; }
 
- 
-
       const minAbs=Math.ceil((z.min/100)*t);
 
       const incAt95=Math.floor(0.95*t*0.005);
 
-      const incAtMin = (z.min===95 && z.max===100) ? Math.floor(minAbs * 0.01) : Math.floor(minAbs * z.rate);
+      const incAtMin = (z.min===95 && z.max===100) ? Math.floor(minAbs*0.01) : Math.floor(minAbs*z.rate);
 
       const gap=Math.max(0,minAbs-a);
 
- 
-
       let html = `<p><b>${z.name}</b></p>`;
 
-      if (z.min===95 && z.max===100){
+      if (z.min===95 && z.max===100){ html += `<p>Minimum incentive at this zone: <b>${INR.format(incAt95)}</b></p>`; }
 
-        html += `<p>Minimum incentive at this zone: <b>${INR.format(incAt95)}</b></p>`;
-
-      } else {
-
-        html += `<p>Minimum incentive at this zone: <b>${INR.format(incAtMin)}</b></p>`;
-
-      }
+      else { html += `<p>Minimum incentive at this zone: <b>${INR.format(incAtMin)}</b></p>`; }
 
       html += `<p>Gap to enter this zone: <b class="${gap>0?'red':'green'}">${gap>0?INR.format(gap):'You are in / above this zone'}</b></p>`;
 
@@ -1042,11 +982,11 @@
 
     const REWARD_EMOJIS=['💪','🎉','👏','🥉','🥈','🥇','🏆','👑'];
 
-    function triggerRewardIfSlabAdvanced(pct, exactly95){
+    function triggerRewardIfSlabAdvanced(pct, achieved, target){
 
-      const idx=slabIndexForPct(pct, exactly95);
+      const idx=slabIndexForPct(pct, achieved, target);
 
-      if (idx>lastSlabIdx){ lastSlabIdx=idx; runReward(idx); }
+      if (idx>lastSlabIdx){ lastSlabIdx=idx; runReward(Math.max(idx,0)); }
 
     }
 
@@ -1060,7 +1000,7 @@
 
       stage.innerHTML=''; overlay.classList.add('show');
 
-      if (idx===0){
+      if (idx<=0){
 
         emoji.textContent=REWARD_EMOJIS[0];
 
@@ -1110,7 +1050,7 @@
 
  
 
-    // ===== NEW: Build the Milestones & Minimum Incentives table
+    /* ===== Milestones table (Sl., color grading, current incentive tag) ===== */
 
     function buildMilestoneTable(target, achieved){
 
@@ -1126,53 +1066,39 @@
 
       const pct = target ? (achieved/target)*100 : 0;
 
-      const exactly95 = Math.abs(achieved - 0.95*target) < 0.5;
+      const curIdx = slabIndexForPct(pct, achieved, target);   // -1 if below 95
 
  
 
-      // Define the 8 display rows (95%, 95–100%, ..., 300%+)
-
       const rows = [
 
-        { label:'95%',        min:95,  max:95,   type:'exact95',   rate:0.005 },
+        { sl:1, label:'95%',        min:95,  max:95,      type:'exact95',   rate:0.005, shade:'shade1' },
 
-        { label:'95–100%',    min:95,  max:100,  type:'range95_100', rate:0.01 },
+        { sl:2, label:'95–100%',    min:95,  max:100,     type:'range95_100', rate:0.01, shade:'shade2' },
 
-        { label:'100–115%',   min:100, max:115,  rate:0.025 },
+        { sl:3, label:'100–115%',   min:100, max:115,     rate:0.025, shade:'shade3' },
 
-        { label:'115–125%',   min:115, max:125,  rate:0.035 },
+        { sl:4, label:'115–125%',   min:115, max:125,     rate:0.035, shade:'shade4' },
 
-        { label:'125–150%',   min:125, max:150,  rate:0.04 },
+        { sl:5, label:'125–150%',   min:125, max:150,     rate:0.04,  shade:'shade5' },
 
-        { label:'150–200%',   min:150, max:200,  rate:0.05 },
+        { sl:6, label:'150–200%',   min:150, max:200,     rate:0.05,  shade:'shade6' },
 
-        { label:'200–300%',   min:200, max:300,  rate:0.06 },
+        { sl:7, label:'200–300%',   min:200, max:300,     rate:0.06,  shade:'shade7' },
 
-        { label:'300%+',      min:300, max:Infinity, rate:0.08 }
+        { sl:8, label:'300%+',      min:300, max:Infinity,rate:0.08,  shade:'shade8' }
 
       ];
 
  
 
-      const fmt = v => INR.format(v);
+      rows.forEach((r,i)=>{
 
- 
+        const inThis =
 
-      rows.forEach(r=>{
-
-        // Determine status relative to current achievement
-
-        let statusText='', incText='';
-
- 
-
-        const inThisZone =
-
-          (r.type==='exact95' && exactly95) ||
+          (r.type==='exact95' && isExactly95(achieved, target)) ||
 
           (pct >= r.min && pct < (r.max===Infinity?Number.POSITIVE_INFINITY:r.max));
-
- 
 
         const crossed =
 
@@ -1182,47 +1108,47 @@
 
  
 
-        if (crossed){
-
-          statusText = 'Already crossed this zone';
-
-          incText    = 'Already crossed this zone';
-
-        } else if (inThisZone){
-
-          statusText = 'In this Zone';
-
-          // Incentive on current achieved with correct rate rules
-
-          const rateNow = rateFor(pct, achieved, target);
-
-          incText = fmt(Math.floor(achieved * rateNow));
-
-        } else {
-
-          // Future zone: show gap to enter (lower limit abs), and minimum incentive at zone minimum
-
-          const minAbs = Math.ceil((r.min/100)*target);
-
-          const gap = Math.max(0, minAbs - achieved);
-
-          statusText = fmt(gap);
+        let nextMilestoneText='', incentiveText='';
 
  
 
-          let rateAtMin = r.rate;
+        if (crossed){
 
-          // For the '95–100%' row we show the minimum incentive using 1% @ 95% (as per your slabs)
+          nextMilestoneText = 'Already crossed this zone';
 
-          // For the exact 95% row, use 0.5% @ 95%.
+          incentiveText     = 'Already crossed this zone';
 
-          if (r.type==='exact95'){ rateAtMin = 0.005; }
+        } else if (inThis){
 
-          // 300%+ min taken at 300%
+          const rNow = rateFor(pct, achieved, target);
 
-          const minBaseAbs = (r.max===Infinity) ? Math.ceil(3.00*target) : minAbs;
+          const inc  = Math.floor(achieved * rNow);
 
-          incText = fmt(Math.floor(minBaseAbs * rateAtMin));
+          nextMilestoneText = 'In this Zone';
+
+          incentiveText     = `${INR.format(inc)} (Current Incentive)`;
+
+        } else {
+
+          const minAbs = Math.ceil((r.min/100)*target);
+
+          const gap    = Math.max(0, minAbs - achieved);
+
+          nextMilestoneText = INR.format(gap);
+
+ 
+
+          let minBaseAbs = minAbs;
+
+          let minRate    = r.rate;
+
+          if (r.type==='exact95'){ minRate = 0.005; }
+
+          if (r.max===Infinity){ minBaseAbs = Math.ceil(3.00*target); }
+
+          const minInc   = Math.floor(minBaseAbs * minRate);
+
+          incentiveText  = INR.format(minInc);
 
         }
 
@@ -1230,11 +1156,27 @@
 
         const tr = document.createElement('tr');
 
-        const td1 = document.createElement('td'); td1.textContent = statusText;
+        const tdSl = document.createElement('td'); tdSl.className='slCell'; tdSl.textContent = r.sl;
 
-        const td2 = document.createElement('td'); td2.textContent = incText;
+        const tdMil= document.createElement('td'); tdMil.textContent = nextMilestoneText;
 
-        tr.appendChild(td1); tr.appendChild(td2);
+        const tdInc= document.createElement('td'); tdInc.textContent = incentiveText;
+
+ 
+
+        // Color only from current slab onwards; crossed rows stay uncolored
+
+        if (!crossed && (inThis || i >= curIdx) && curIdx >= 0){
+
+          tdMil.classList.add(r.shade);
+
+          tdInc.classList.add(r.shade);
+
+        }
+
+ 
+
+        tr.appendChild(tdSl); tr.appendChild(tdMil); tr.appendChild(tdInc);
 
         body.appendChild(tr);
 
@@ -1244,7 +1186,7 @@
 
  
 
-    // Validation + Calculation
+    /* ===== Validation + Calc ===== */
 
     function validateInputs(){
 
@@ -1280,29 +1222,27 @@
 
       const pct = target ? (achieved/target)*100 : 0;
 
-      const exactly95 = Math.abs(achieved - 0.95*target) < 0.5;
+ 
+
+      const rNow = rateFor(pct, achieved, target);
+
+      const incentiveNow = Math.floor(achieved * rNow);
 
  
 
-      const rateNow=rateFor(pct, achieved, target);
+      const nextAbs = nextMilestoneAbs(pct, achieved, target); // includes 95%→+₹1 rule
 
-      const incentiveNow=Math.floor(achieved*rateNow);
+      let gap=0, atNextIncentive=incentiveNow;
 
- 
+      if (nextAbs !== null){
 
-      const nextPct=nextThresholdPct(pct, exactly95);
+        gap = Math.max(0, nextAbs - achieved);
 
-      let gap=0, atNextIncentive=0;
+        const pctNext = (nextAbs/target)*100;
 
-      if (nextPct!==null){
+        const rNext   = rateFor(pctNext, nextAbs, target);
 
-        const nextAbs=Math.ceil((nextPct/100)*target);
-
-        gap=Math.max(0, nextAbs-achieved);
-
-        const rateNext=rateFor(nextPct, nextAbs, target);
-
-        atNextIncentive=Math.floor(nextAbs*rateNext);
+        atNextIncentive = Math.floor(nextAbs * rNext);
 
       }
 
@@ -1316,13 +1256,13 @@
 
       document.getElementById('outIncentive').innerText=INR.format(incentiveNow);
 
-      document.getElementById('outGap').innerText = nextPct===null ? '—' : INR.format(gap);
+      document.getElementById('outGap').innerText = (nextAbs===null ? '—' : INR.format(gap));
 
-      document.getElementById('outNextInc').innerText = nextPct===null ? INR.format(incentiveNow) : INR.format(atNextIncentive);
+      document.getElementById('outNextInc').innerText = INR.format(atNextIncentive);
 
  
 
-      // Near-miss
+      // Near-miss 93–95
 
       const miss=document.getElementById('nearMiss');
 
@@ -1332,7 +1272,7 @@
 
  
 
-      // Progress absolute segments (with lakh labels + collision avoidance)
+      // Progress bar
 
       buildAbsoluteProgress(target, achieved);
 
@@ -1346,11 +1286,11 @@
 
       // Rewards
 
-      triggerRewardIfSlabAdvanced(pct, exactly95);
+      triggerRewardIfSlabAdvanced(pct, achieved, target);
 
  
 
-      // NEW: Build milestones table
+      // Milestones table
 
       buildMilestoneTable(target, achieved);
 
@@ -1358,31 +1298,15 @@
 
  
 
-    // ===== App initializer (runs after unlock) =====
-
     function initializeApp(){
-
-      // Inputs mask
 
       attachMask('target','err-target');
 
       attachMask('achieved','err-achieved');
 
- 
-
-      // Build gauge
-
       buildGauge();
 
- 
-
-      // Button
-
       document.getElementById('btnCalc').addEventListener('click', calculate);
-
- 
-
-      // Register SW after unlock
 
       if ('serviceWorker' in navigator){
 
@@ -1393,8 +1317,6 @@
     }
 
  
-
-    // ===== Boot sequence =====
 
     document.addEventListener('DOMContentLoaded', () => {
 
@@ -1427,5 +1349,3 @@
 </body>
 
 </html>
-
- 
