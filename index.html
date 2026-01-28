@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,69 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
   <title>Incentive Calculator</title>
 
-/* SIMPLE PASSWORD PROTECTION (Plain-text password – Admin friendly)
-   ==================================================================
-   👉 Admin sets the password here in plain text.
-   👉 Allowed: letters, numbers, special characters.
-   👉 Example: "Tanmoy@2026"
-*/
-
-const PASSWORD = "Tanmoy";   // ← ADMIN CHANGES ONLY THIS
-
-// Stores unlock per-tab:
-const SESSION_KEY = "ic_unlocked_simple_v1";
-
-// Render-blocking password overlay:
-function showSimpleGate(){
-  document.body.insertAdjacentHTML("beforeend", `
-    <div id="pwdGate" style="
-      position:fixed; inset:0; background:rgba(0,0,0,0.1);
-      display:grid; place-items:center; z-index:99999;">
-      <div style="
-        background:white; padding:20px; width:90%; max-width:350px;
-        border-radius:12px; border:1px solid #ddd;">
-        
-        <h2 style="margin:6px 0 10px; font-size:20px;">Enter Password</h2>
-        <p style="font-size:13px; color:#555;">This portal is for internal use.</p>
-
-        <input id="pwdInput" type="password" placeholder="Password"
-          style="width:100%; margin-top:12px; padding:10px; font-size:16px; border-radius:8px; border:1px solid #ccc;">
-
-        <div id="pwdErr" style="color:#b91c1c; display:none; margin-top:8px; font-size:13px;">
-          Wrong password. Please try again.
-        </div>
-
-        <button id="pwdBtn" style="
-          width:100%; margin-top:14px; padding:12px; border:0;
-          background:#0f4c81; color:white; font-size:16px; border-radius:10px;">
-          Unlock
-        </button>
-      </div>
-    </div>
-  `);
-
-  document.getElementById("pwdBtn").onclick = () => {
-    const entered = document.getElementById("pwdInput").value.trim();
-    if (entered === PASSWORD){
-      sessionStorage.setItem(SESSION_KEY, "1");
-      document.getElementById("pwdGate").remove();
-    } else {
-      document.getElementById("pwdErr").style.display = "block";
-    }
-  };
-}
-
-// Auto-show gate on first load
-document.addEventListener("DOMContentLoaded", () => {
-  if (PASSWORD && sessionStorage.getItem(SESSION_KEY) !== "1"){
-    showSimpleGate();
-  }
-});
-  
-  <!-- PWA & Icons (fixed) -->
-  manifest.webmanifest
-  icons/icon-192.png
-  icons/icon-192.png
+  <!-- PWA & Icons -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png" sizes="192x192">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <meta name="theme-color" content="#0f4c81"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <!-- Soft anti-indexing -->
@@ -92,10 +32,10 @@ document.addEventListener("DOMContentLoaded", () => {
     @media (max-width:720px){.row{grid-template-columns:1fr}}
     label{font-size:13px;color:#334155;margin-bottom:6px;display:block}
     .req::after{content:" *";color:#b91c1c}
-    input[type=text]{width:100%;padding:12px 14px;border:1px solid #cbd5e1;border-radius:10px;font-size:16px}
+    input[type=text], input[type=password]{width:100%;padding:12px 14px;border:1px solid #cbd5e1;border-radius:10px;font-size:16px}
     input.err{border-color:#ef4444;background:#fff1f2}
     .err-text{color:#b91c1c;font-size:12px;margin-top:6px;display:none}
-    .btn{width:100%;padding:12px 16px;background:var(--brand);color:#fff;border:0;border-radius:10px;font-size:16px}
+    .btn{width:100%;padding:12px 16px;background:var(--brand);color:#fff;border:0;border-radius:10px;font-size:16px;cursor:pointer}
     .muted{color:var(--muted);font-size:12px}
 
     /* ===== Progress Bar (absolute ₹ segments with lakh labels) ===== */
@@ -141,12 +81,44 @@ document.addEventListener("DOMContentLoaded", () => {
     @keyframes fall{to{transform:translateY(110vh) rotate(720deg);opacity:1}}
     .big-emoji{position:absolute;inset:auto 0 18% 0;text-align:center;font-size:56px;filter:drop-shadow(0 3px 8px rgba(0,0,0,.25))}
     .nudge{background:#fff3cd;border:1px solid #ffe08a;color:#7a5b00;padding:8px 12px;border-radius:10px}
+
+    /* ===== Password Gate Overlay (soft) ===== */
+    .gate{
+      position:fixed; inset:0; background:linear-gradient(180deg, rgba(15,76,129,.08), rgba(0,0,0,.05));
+      display:grid; place-items:center; z-index:9999; padding:16px;
+    }
+    .gate .panel{
+      width:100%; max-width:420px; background:#fff; border:1px solid #e7ebf0; border-radius:12px;
+      box-shadow:0 6px 30px rgba(0,0,0,.08); padding:16px 16px 18px;
+    }
+    .gate h2{margin:6px 0 10px; font-size:20px}
+    .gate .hint{font-size:12px; color:#64748b}
+    .gate .err{color:#b91c1c; font-size:13px; display:none; margin-top:6px}
+    .gate .actions{display:flex; gap:8px; margin-top:10px}
+    .gate .btn-sec{background:#e2e8f0; color:#111}
   </style>
 </head>
 <body>
-  <div class="wrap">
+
+  <!-- ===== Password Gate (soft) ===== -->
+  <div class="gate" id="pwdGate" style="display:none">
+    <div class="panel">
+      <h2>Enter Access Password</h2>
+      <p class="hint">This portal is for internal use. Contact your manager for the current password.</p>
+      <label style="display:block;margin-top:10px;font-size:13px;color:#334155">Password</label>
+      <input id="pwdInput" type="password" inputmode="text" placeholder="Enter password" autocomplete="current-password"/>
+      <div id="pwdErr" class="err">Wrong password. Please try again.</div>
+      <div class="actions">
+        <button class="btn" id="pwdBtn">Unlock</button>
+        <button class="btn btn-sec" id="pwdClear">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Main App ===== -->
+  <div class="wrap" id="appRoot" style="visibility:hidden">
     <header>
-      icons/icon-192.png
+      <img src="icons/icon-192.png" class="logo" alt="logo">
       <h1>Incentive Calculator</h1>
     </header>
 
@@ -231,7 +203,43 @@ document.addEventListener("DOMContentLoaded", () => {
   </div>
 
   <script>
-    /* ========== Indian number mask ========== */
+    /* ============================
+       SIMPLE PASSWORD GATE (soft)
+       ============================ */
+
+    // ADMIN: set your password here in plain text (4–64 chars recommended)
+    const PASSWORD = "Tanmoy";   // ← change this to your actual password
+
+    const SESSION_KEY = "ic_unlocked_simple_v1";
+
+    function showSimpleGate(){
+      const gate = document.getElementById('pwdGate');
+      const app  = document.getElementById('appRoot');
+      app.style.visibility = 'hidden';
+      gate.style.display = 'grid';
+
+      const input = document.getElementById('pwdInput');
+      const btn   = document.getElementById('pwdBtn');
+      const clr   = document.getElementById('pwdClear');
+      const err   = document.getElementById('pwdErr');
+
+      btn.onclick = () => {
+        const entered = (input.value || "").trim();
+        if (entered === PASSWORD){
+          sessionStorage.setItem(SESSION_KEY, '1');
+          gate.style.display = 'none';
+          app.style.visibility = 'visible';
+          initializeApp();
+        } else {
+          err.style.display = 'block';
+        }
+      };
+      clr.onclick = () => { input.value = ""; err.style.display = 'none'; };
+    }
+
+    /* ============================
+       EXISTING APP LOGIC (same)
+       ============================ */
     const INRfmt = new Intl.NumberFormat('en-IN',{maximumFractionDigits:0});
     const INR = new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0});
     const PCT = v => (Math.round(v*10)/10)+'%';
@@ -256,7 +264,7 @@ document.addEventListener("DOMContentLoaded", () => {
       el.addEventListener('blur',()=>{el.value=formatIndian(el.value);});
     }
 
-    /* ========== Lakh short formatter (up to 2 decimals) ========== */
+    // Lakh short formatter (up to 2 decimals)
     function formatLakhShort(valueInRupees){
       const x = valueInRupees / 100000; // lakhs
       if (x === 0) return '0';
@@ -266,7 +274,6 @@ document.addEventListener("DOMContentLoaded", () => {
       return s;
     }
 
-    /* ========== Slabs (colors kept; rates only for math, not shown) ========== */
     const SLABS = [
       { name:'Zone 1',  min:0,   max:95,   rate:0.00, color:'#D32F2F' },
       { name:'Zone 2',  min:95,  max:100,  rate:0.01, color:'#F57C00' },
@@ -277,7 +284,6 @@ document.addEventListener("DOMContentLoaded", () => {
       { name:'Zone 7',  min:200, max:300,  rate:0.06, color:'#2E7D32' },
       { name:'Zone 8',  min:300, max:9999, rate:0.08, color:'#00695C' }
     ];
-    const BOUNDS=[0,95,100,115,125,150,200,300];
     const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 
     function rateFor(pct, achieved, target){
@@ -315,7 +321,6 @@ document.addEventListener("DOMContentLoaded", () => {
       return 7;
     }
 
-    /* ========== Progress Bar (absolute ₹ segments) ========== */
     function getNextSlabBounds(pct, exactly95){
       if (pct < 95)   return {nmin:95,  nmax:100};
       if (exactly95)  return {nmin:100, nmax:115};
@@ -328,7 +333,6 @@ document.addEventListener("DOMContentLoaded", () => {
       return {nmin:300, nmax:300};
     }
 
-    // Arrange labels over two rows to avoid overlapping
     function arrangeLabelCollisions(container, items){
       const width = container.clientWidth || container.getBoundingClientRect().width || 1;
       const minGapPx = 48; // minimum horizontal separation
@@ -416,7 +420,7 @@ document.addEventListener("DOMContentLoaded", () => {
       ]);
     }
 
-    /* ========== Incentive Slabs (gauge) ========== */
+    // Gauge
     const zonesG=document.getElementById('zones');
     const legend=document.getElementById('legend');
     const pointerGroup=document.getElementById('pointerGroup');
@@ -424,7 +428,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const RADIUS = Math.hypot(80, 20);
     const START_DEG = Math.atan2(-20, -80) * 180/Math.PI;
     const END_DEG   = Math.atan2(-20,  80) * 180/Math.PI;
-    function pctToDeg(pct){ const p=clamp(pct,0,300); return START_DEG + (p/300)*(END_DEG - START_DEG); }
+    const clampPct = v => Math.max(0, Math.min(300, v));
+    function pctToDeg(pct){ const p=clampPct(pct); return START_DEG + (p/300)*(END_DEG - START_DEG); }
     function deg2rad(d){ return (Math.PI/180)*d; }
     function xy(angleDeg){ const a=deg2rad(angleDeg); return [ RADIUS*Math.cos(a), RADIUS*Math.sin(a) ]; }
     function arcPath(fromDeg,toDeg){
@@ -459,7 +464,7 @@ document.addEventListener("DOMContentLoaded", () => {
       pointerGroup.setAttribute('transform',`rotate(${ang})`);
     }
 
-    // Zone details (privacy-trimmed): only min incentive & gap
+    // Zone details (privacy-trimmed)
     function showZoneDetails(i){
       const t=parseINR(document.getElementById('target').value);
       const a=parseINR(document.getElementById('achieved').value);
@@ -469,9 +474,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const minAbs=Math.ceil((z.min/100)*t);
       const incAt95=Math.floor(0.95*t*0.005);
-      const incAtMin = (z.min===95 && z.max===100)
-        ? Math.floor(minAbs * 0.01)
-        : Math.floor(minAbs * z.rate);
+      const incAtMin = (z.min===95 && z.max===100) ? Math.floor(minAbs * 0.01) : Math.floor(minAbs * z.rate);
       const gap=Math.max(0,minAbs-a);
 
       let html = `<p><b>${z.name}</b></p>`;
@@ -484,7 +487,7 @@ document.addEventListener("DOMContentLoaded", () => {
       b.innerHTML = html;
     }
 
-    /* ========== Rewards ========== */
+    // Rewards
     let lastSlabIdx=-1;
     const REWARD_EMOJIS=['💪','🎉','👏','🥉','🥈','🥇','🏆','👑'];
     function triggerRewardIfSlabAdvanced(pct, exactly95){
@@ -521,7 +524,7 @@ document.addEventListener("DOMContentLoaded", () => {
       setTimeout(()=> overlay.classList.remove('show'),2200);
     }
 
-    /* ========== Validation + Calculation ========== */
+    // Validation + Calculation
     function validateInputs(){
       const tEl=document.getElementById('target');
       const aEl=document.getElementById('achieved');
@@ -565,7 +568,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (pct>=93 && pct<95){ miss.style.display='block'; document.getElementById('missAmt').innerText=INR.format(Math.ceil(0.95*target-achieved)); }
       else miss.style.display='none';
 
-      // Progress absolute segments with lakh labels and collision avoidance
+      // Progress absolute segments (with lakh labels + collision avoidance)
       buildAbsoluteProgress(target, achieved);
 
       // Gauge pointer
@@ -575,15 +578,39 @@ document.addEventListener("DOMContentLoaded", () => {
       triggerRewardIfSlabAdvanced(pct, exactly95);
     }
 
-    /* ========== Init ========== */
-    attachMask('target','err-target');
-    attachMask('achieved','err-achieved');
-    buildGauge();
-    document.getElementById('btnCalc').addEventListener('click', calculate);
+    // ===== App initializer (runs after unlock) =====
+    function initializeApp(){
+      // Inputs mask
+      attachMask('target','err-target');
+      attachMask('achieved','err-achieved');
 
-    if ('serviceWorker' in navigator){
-      navigator.serviceWorker.register('./service-worker.js');
+      // Build gauge
+      buildGauge();
+
+      // Button
+      document.getElementById('btnCalc').addEventListener('click', calculate);
+
+      // Register SW after unlock
+      if ('serviceWorker' in navigator){
+        navigator.serviceWorker.register('./service-worker.js');
+      }
     }
+
+    // ===== Boot sequence =====
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!PASSWORD){ // if admin clears password, no gate (not recommended)
+        document.getElementById('appRoot').style.visibility = 'visible';
+        initializeApp();
+        return;
+      }
+      // If already unlocked this tab, go straight in
+      if (sessionStorage.getItem(SESSION_KEY) === '1'){
+        document.getElementById('appRoot').style.visibility = 'visible';
+        initializeApp();
+      } else {
+        showSimpleGate();
+      }
+    });
   </script>
 </body>
 </html>
