@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,13 +6,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
   <title>Incentive Calculator</title>
 
-  <!-- Proper PWA & icons -->
-  <link rel="manifest" href="manifest.webmanifest"/>
-  <link rel="icon" href="icons/icon-192.png" sizes="192x192"/>
-  <link rel="apple-touch-icon" href="icons/icon-192.png"/>
+  <!-- PWA & Icons (fixed) -->
+  manifest.webmanifest
+  icons/icon-192.png
+  icons/icon-192.png
   <meta name="theme-color" content="#0f4c81"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
-
   <!-- Soft anti-indexing -->
   <meta name="robots" content="noindex,nofollow"/>
 
@@ -33,10 +33,10 @@
     @media (max-width:720px){.row{grid-template-columns:1fr}}
     label{font-size:13px;color:#334155;margin-bottom:6px;display:block}
     .req::after{content:" *";color:#b91c1c}
-    input[type=text],input[type=password]{width:100%;padding:12px 14px;border:1px solid #cbd5e1;border-radius:10px;font-size:16px}
+    input[type=text]{width:100%;padding:12px 14px;border:1px solid #cbd5e1;border-radius:10px;font-size:16px}
     input.err{border-color:#ef4444;background:#fff1f2}
     .err-text{color:#b91c1c;font-size:12px;margin-top:6px;display:none}
-    .btn{width:100%;padding:12px 16px;background:var(--brand);color:#fff;border:0;border-radius:10px;font-size:16px;cursor:pointer}
+    .btn{width:100%;padding:12px 16px;background:var(--brand);color:#fff;border:0;border-radius:10px;font-size:16px}
     .muted{color:var(--muted);font-size:12px}
 
     /* ===== Progress Bar (absolute ₹ segments with lakh labels) ===== */
@@ -82,61 +82,12 @@
     @keyframes fall{to{transform:translateY(110vh) rotate(720deg);opacity:1}}
     .big-emoji{position:absolute;inset:auto 0 18% 0;text-align:center;font-size:56px;filter:drop-shadow(0 3px 8px rgba(0,0,0,.25))}
     .nudge{background:#fff3cd;border:1px solid #ffe08a;color:#7a5b00;padding:8px 12px;border-radius:10px}
-
-    /* ===== Password Gate Overlay ===== */
-    .gate{
-      position:fixed; inset:0; background:linear-gradient(180deg, rgba(15,76,129,.08), rgba(0,0,0,.05));
-      display:grid; place-items:center; z-index:9999; padding:16px;
-    }
-    .gate .panel{
-      width:100%; max-width:420px; background:#fff; border:1px solid #e7ebf0; border-radius:12px;
-      box-shadow:0 6px 30px rgba(0,0,0,.08); padding:16px 16px 18px;
-    }
-    .gate h2{margin:6px 0 10px; font-size:20px}
-    .gate .hint{font-size:12px; color:#64748b}
-    .gate .err{color:#b91c1c; font-size:13px; display:none; margin-top:6px}
-    .gate .cooldown{color:#7a5b00; font-size:13px; display:none; margin-top:6px}
-    .gate .actions{display:flex; gap:8px; margin-top:10px}
-    .gate .btn-sec{background:#e2e8f0; color:#111}
-    .admin-helper{margin-top:12px; display:none}
-    .admin-helper textarea{width:100%; height:70px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; padding:8px}
   </style>
 </head>
 <body>
-
-  <!-- ===== Password Gate ===== -->
-  <div class="gate" id="gate" style="display:none">
-    <div class="panel">
-      <h2>Enter Access Password</h2>
-      <p class="hint">This portal is for internal use. Contact your manager for the current password.</p>
-      <label style="display:block;margin-top:10px;font-size:13px;color:#334155">Password</label>
-      <input id="gatePass" type="password" inputmode="text" placeholder="Enter password" autocomplete="current-password"/>
-      <div id="gateErr" class="err">Incorrect password. Please try again.</div>
-      <div id="gateCooldown" class="cooldown"></div>
-      <div class="actions">
-        <button class="btn" id="gateBtn">Unlock</button>
-        <button class="btn btn-sec" id="gateClear">Clear</button>
-      </div>
-
-      <!-- Admin hash helper (open the page with #hashhelper to reveal) -->
-      <div class="admin-helper" id="hashHelper">
-        <hr style="margin:12px 0"/>
-        <h3 style="margin:0 0 6px;font-size:14px">Admin: Password Hash Helper</h3>
-        <p class="hint">Type a new password (4–64 chars) to generate its SHA‑256. Copy the hex and paste into <b>PASSWORD_SHA256</b> in the code, commit to GitHub.</p>
-        <input id="newPass" type="password" placeholder="New password" style="margin-top:6px"/>
-        <div class="actions">
-          <button class="btn" id="btnHash">Generate SHA‑256</button>
-        </div>
-        <label style="display:block;margin-top:8px;font-size:12px;color:#334155">SHA‑256 (hex)</label>
-        <textarea id="hashOut" readonly></textarea>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== Main App ===== -->
-  <div class="wrap" id="appRoot" style="visibility:hidden">
+  <div class="wrap">
     <header>
-      <img src="icons/icon-192.png" alt="" class="logo"/>
+      icons/icon-192.png
       <h1>Incentive Calculator</h1>
     </header>
 
@@ -221,135 +172,7 @@
   </div>
 
   <script>
-    /* ============================
-       PASSWORD GATE (soft lock)
-       ============================ */
-
-    // 1) ADMIN: set this to the SHA-256 hex of your password.
-    //    Leave empty "" to disable the gate (not recommended).
-    //    Use the built-in helper: open the page with #hashhelper to generate a SHA-256 hash.
-    const PASSWORD_SHA256 = ""; // <-- paste SHA-256 here (hex)
-
-    // 2) Gate settings
-    const MAX_ATTEMPTS = 5;
-    const COOLDOWN_MS = 60_000; // 60 seconds
-    const SESSION_KEY = "ic_unlocked_v1";
-    const ATTEMPTS_KEY = "ic_attempts_v1";
-    const LOCK_UNTIL_KEY = "ic_lock_until_v1";
-
-    // SHA-256 helper
-    async function sha256Hex(str){
-      if (!window.crypto?.subtle) throw new Error('Crypto not supported in this browser');
-      const data = new TextEncoder().encode(str);
-      const digest = await crypto.subtle.digest('SHA-256', data);
-      return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
-    }
-
-    function showGate(){
-      const gate = document.getElementById('gate');
-      gate.style.display = 'grid';
-      document.getElementById('appRoot').style.visibility = 'hidden';
-
-      // Reveal admin hash helper if URL contains #hashhelper
-      if (location.hash === '#hashhelper'){
-        document.getElementById('hashHelper').style.display = 'block';
-      }
-    }
-    function hideGate(){
-      document.getElementById('gate').style.display = 'none';
-      document.getElementById('appRoot').style.visibility = 'visible';
-    }
-
-    function updateCooldownUI(){
-      const lockUntil = Number(localStorage.getItem(LOCK_UNTIL_KEY) || 0);
-      const cdEl = document.getElementById('gateCooldown');
-      const btn = document.getElementById('gateBtn');
-      const pass = document.getElementById('gatePass');
-      if (Date.now() < lockUntil){
-        const secs = Math.ceil((lockUntil - Date.now())/1000);
-        cdEl.style.display = 'block';
-        cdEl.textContent = `Too many attempts. Try again in ${secs}s.`;
-        btn.disabled = true; pass.disabled = true;
-        setTimeout(updateCooldownUI, 250);
-      }else{
-        cdEl.style.display = 'none';
-        btn.disabled = false; pass.disabled = false;
-      }
-    }
-
-    async function handleUnlock(){
-      const err = document.getElementById('gateErr');
-      err.style.display = 'none';
-
-      const lockUntil = Number(localStorage.getItem(LOCK_UNTIL_KEY) || 0);
-      if (Date.now() < lockUntil){ updateCooldownUI(); return; }
-
-      const pass = (document.getElementById('gatePass').value || '').trim();
-      if (pass.length < 4 || pass.length > 64){
-        err.textContent = 'Password must be 4–64 characters.'; err.style.display = 'block'; return;
-      }
-      try{
-        const hash = await sha256Hex(pass);
-        if (PASSWORD_SHA256 && hash === PASSWORD_SHA256){
-          sessionStorage.setItem(SESSION_KEY, '1');
-          localStorage.removeItem(ATTEMPTS_KEY);
-          localStorage.removeItem(LOCK_UNTIL_KEY);
-          hideGate();
-          initializeApp(); // proceed
-        }else{
-          // wrong
-          const at = Number(localStorage.getItem(ATTEMPTS_KEY) || 0) + 1;
-          localStorage.setItem(ATTEMPTS_KEY, String(at));
-          err.textContent = 'Incorrect password. Please try again.';
-          err.style.display = 'block';
-          if (at >= MAX_ATTEMPTS){
-            localStorage.setItem(LOCK_UNTIL_KEY, String(Date.now() + COOLDOWN_MS));
-            updateCooldownUI();
-          }
-        }
-      }catch(e){
-        err.textContent = 'Your browser does not support the security module.';
-        err.style.display = 'block';
-      }
-    }
-
-    function bootSecurity(){
-      // If admin hasn't set PASSWORD_SHA256, bypass (not recommended)
-      if (!PASSWORD_SHA256){
-        initializeApp();
-        return;
-      }
-      // Already unlocked this tab?
-      if (sessionStorage.getItem(SESSION_KEY) === '1'){
-        initializeApp();
-        return;
-      }
-      // Otherwise show gate
-      showGate();
-      updateCooldownUI();
-
-      document.getElementById('gateBtn').addEventListener('click', handleUnlock);
-      document.getElementById('gateClear').addEventListener('click', ()=>{
-        document.getElementById('gatePass').value = '';
-        document.getElementById('gateErr').style.display = 'none';
-      });
-
-      // Admin hash helper
-      const btnHash = document.getElementById('btnHash');
-      if (btnHash){
-        btnHash.addEventListener('click', async ()=>{
-          const pw = (document.getElementById('newPass').value || '').trim();
-          if (pw.length < 4 || pw.length > 64){ alert('Password must be 4–64 characters.'); return; }
-          const hex = await sha256Hex(pw);
-          document.getElementById('hashOut').value = hex;
-        });
-      }
-    }
-
-    /* ============================
-       Existing App Logic (unchanged)
-       ============================ */
-
+    /* ========== Indian number mask ========== */
     const INRfmt = new Intl.NumberFormat('en-IN',{maximumFractionDigits:0});
     const INR = new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0});
     const PCT = v => (Math.round(v*10)/10)+'%';
@@ -374,7 +197,7 @@
       el.addEventListener('blur',()=>{el.value=formatIndian(el.value);});
     }
 
-    // Lakh short formatter (up to 2 decimals)
+    /* ========== Lakh short formatter (up to 2 decimals) ========== */
     function formatLakhShort(valueInRupees){
       const x = valueInRupees / 100000; // lakhs
       if (x === 0) return '0';
@@ -384,6 +207,7 @@
       return s;
     }
 
+    /* ========== Slabs (colors kept; rates only for math, not shown) ========== */
     const SLABS = [
       { name:'Zone 1',  min:0,   max:95,   rate:0.00, color:'#D32F2F' },
       { name:'Zone 2',  min:95,  max:100,  rate:0.01, color:'#F57C00' },
@@ -394,6 +218,7 @@
       { name:'Zone 7',  min:200, max:300,  rate:0.06, color:'#2E7D32' },
       { name:'Zone 8',  min:300, max:9999, rate:0.08, color:'#00695C' }
     ];
+    const BOUNDS=[0,95,100,115,125,150,200,300];
     const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 
     function rateFor(pct, achieved, target){
@@ -431,6 +256,7 @@
       return 7;
     }
 
+    /* ========== Progress Bar (absolute ₹ segments) ========== */
     function getNextSlabBounds(pct, exactly95){
       if (pct < 95)   return {nmin:95,  nmax:100};
       if (exactly95)  return {nmin:100, nmax:115};
@@ -443,6 +269,7 @@
       return {nmin:300, nmax:300};
     }
 
+    // Arrange labels over two rows to avoid overlapping
     function arrangeLabelCollisions(container, items){
       const width = container.clientWidth || container.getBoundingClientRect().width || 1;
       const minGapPx = 48; // minimum horizontal separation
@@ -530,7 +357,7 @@
       ]);
     }
 
-    // Gauge
+    /* ========== Incentive Slabs (gauge) ========== */
     const zonesG=document.getElementById('zones');
     const legend=document.getElementById('legend');
     const pointerGroup=document.getElementById('pointerGroup');
@@ -538,8 +365,7 @@
     const RADIUS = Math.hypot(80, 20);
     const START_DEG = Math.atan2(-20, -80) * 180/Math.PI;
     const END_DEG   = Math.atan2(-20,  80) * 180/Math.PI;
-    const clampPct = v => Math.max(0, Math.min(300, v));
-    function pctToDeg(pct){ const p=clampPct(pct); return START_DEG + (p/300)*(END_DEG - START_DEG); }
+    function pctToDeg(pct){ const p=clamp(pct,0,300); return START_DEG + (p/300)*(END_DEG - START_DEG); }
     function deg2rad(d){ return (Math.PI/180)*d; }
     function xy(angleDeg){ const a=deg2rad(angleDeg); return [ RADIUS*Math.cos(a), RADIUS*Math.sin(a) ]; }
     function arcPath(fromDeg,toDeg){
@@ -574,7 +400,7 @@
       pointerGroup.setAttribute('transform',`rotate(${ang})`);
     }
 
-    // Zone details (privacy-trimmed)
+    // Zone details (privacy-trimmed): only min incentive & gap
     function showZoneDetails(i){
       const t=parseINR(document.getElementById('target').value);
       const a=parseINR(document.getElementById('achieved').value);
@@ -584,7 +410,9 @@
 
       const minAbs=Math.ceil((z.min/100)*t);
       const incAt95=Math.floor(0.95*t*0.005);
-      const incAtMin = (z.min===95 && z.max===100) ? Math.floor(minAbs * 0.01) : Math.floor(minAbs * z.rate);
+      const incAtMin = (z.min===95 && z.max===100)
+        ? Math.floor(minAbs * 0.01)
+        : Math.floor(minAbs * z.rate);
       const gap=Math.max(0,minAbs-a);
 
       let html = `<p><b>${z.name}</b></p>`;
@@ -597,7 +425,7 @@
       b.innerHTML = html;
     }
 
-    // Rewards
+    /* ========== Rewards ========== */
     let lastSlabIdx=-1;
     const REWARD_EMOJIS=['💪','🎉','👏','🥉','🥈','🥇','🏆','👑'];
     function triggerRewardIfSlabAdvanced(pct, exactly95){
@@ -634,7 +462,7 @@
       setTimeout(()=> overlay.classList.remove('show'),2200);
     }
 
-    // Validation + Calculation
+    /* ========== Validation + Calculation ========== */
     function validateInputs(){
       const tEl=document.getElementById('target');
       const aEl=document.getElementById('achieved');
@@ -678,7 +506,7 @@
       if (pct>=93 && pct<95){ miss.style.display='block'; document.getElementById('missAmt').innerText=INR.format(Math.ceil(0.95*target-achieved)); }
       else miss.style.display='none';
 
-      // Progress absolute segments (with lakh labels + collision avoidance)
+      // Progress absolute segments with lakh labels and collision avoidance
       buildAbsoluteProgress(target, achieved);
 
       // Gauge pointer
@@ -688,29 +516,15 @@
       triggerRewardIfSlabAdvanced(pct, exactly95);
     }
 
-    // ===== App initializer (only runs after unlock) =====
-    function initializeApp(){
-      // Show app
-      document.getElementById('appRoot').style.visibility = 'visible';
+    /* ========== Init ========== */
+    attachMask('target','err-target');
+    attachMask('achieved','err-achieved');
+    buildGauge();
+    document.getElementById('btnCalc').addEventListener('click', calculate);
 
-      // Inputs mask
-      attachMask('target','err-target');
-      attachMask('achieved','err-achieved');
-
-      // Build gauge
-      buildGauge();
-
-      // Button
-      document.getElementById('btnCalc').addEventListener('click', calculate);
-
-      // Register SW after unlock (to avoid caching unlocked state incorrectly)
-      if ('serviceWorker' in navigator){
-        navigator.serviceWorker.register('./service-worker.js');
-      }
+    if ('serviceWorker' in navigator){
+      navigator.serviceWorker.register('./service-worker.js');
     }
-
-    // ===== Boot sequence =====
-    document.addEventListener('DOMContentLoaded', bootSecurity);
   </script>
 </body>
 </html>
