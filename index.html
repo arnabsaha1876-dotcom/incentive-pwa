@@ -5,10 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
   <title>Incentive Calculator</title>
 
-  manifest.webmanifest
+  <!-- PWA & Icons (fixed) -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <meta name="theme-color" content="#0f4c81"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
-  icons/icon-192.png
+  <!-- Soft anti-indexing -->
+  <meta name="robots" content="noindex,nofollow"/>
 
   <style>
     :root{
@@ -19,8 +23,10 @@
     *{box-sizing:border-box}
     html,body{margin:0;padding:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
     .wrap{max-width:960px;margin:0 auto;padding:16px 12px 80px}
-    header{display:flex;align-items:center;gap:12px;margin:4px 0 12px}
+    header{display:flex;align-items:center;gap:10px;margin:4px 0 12px}
     header h1{font-size:20px;margin:0}
+    .logo{width:24px;height:24px;border-radius:6px}
+
     .card{background:var(--card);border:1px solid #e7ebf0;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);padding:14px;margin:10px 0}
     .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     @media (max-width:720px){.row{grid-template-columns:1fr}}
@@ -32,19 +38,20 @@
     .btn{width:100%;padding:12px 16px;background:var(--brand);color:#fff;border:0;border-radius:10px;font-size:16px}
     .muted{color:var(--muted);font-size:12px}
 
-    /* ===== Dynamic Progress Bar (labels positioned precisely) ===== */
+    /* ===== Progress Bar (absolute ₹ segments) ===== */
     .barWrap{margin-top:8px}
     .bar{position:relative;height:18px;border-radius:10px;background:var(--bar-bg);overflow:hidden}
-    .fill{position:absolute;left:0;top:0;height:100%;
-      background:linear-gradient(90deg,#d32f2f,#f57c00,#fbc02d,#7cb342,#2e7d32);
-      transition:width .35s ease}
-    .tick{position:absolute;top:0;height:100%;width:2px;background:#ffffff90;border-left:1px solid #9aa5b180}
+    .seg{position:absolute;top:0;height:100%}
+    .seg1{background:#90caf9}  /* Achieved */
+    .seg2{background:#ffe082}  /* To next min */
+    .seg3{background:#c8e6c9}  /* Next slab span */
     .labelsAbs{position:relative;height:18px;margin-top:6px}
     .labelsAbs span{position:absolute;transform:translateX(-50%);top:0;font-size:11px;color:var(--muted);white-space:nowrap}
+    .tick{position:absolute;top:0;height:100%;width:2px;background:#ffffffaa}
 
     .callout{border-left:4px solid #ef6c00;background:#fff7ed;color:#7c3f10;padding:8px 10px;border-radius:8px;margin-top:12px;font-size:14px;display:none}
 
-    /* ===== Speedometer (working) ===== */
+    /* ===== Incentive Slabs gauge ===== */
     .gauge{position:relative;background:var(--card);border:1px solid #e7ebf0;border-radius:12px;padding:10px;display:flex;flex-direction:column;align-items:center}
     svg{max-width:520px;width:100%;height:auto}
     .pointer{transform-origin:0 0;transition:transform .5s ease}
@@ -72,7 +79,7 @@
 <body>
   <div class="wrap">
     <header>
-      icons/icon-192.png
+      <img class="logo" src="icons/icon-192.png" alt="Logo" onerror="this.style.display='none'"/>
       <h1>Incentive Calculator</h1>
     </header>
 
@@ -96,33 +103,44 @@
       <p class="muted">Numbers auto‑format in Indian style (e.g., 10,00,000). Save to your home screen.</p>
     </div>
 
-    <!-- Dynamic Progress -->
+    <!-- Progress (absolute ₹ segments) -->
     <div class="card">
       <h3 style="margin:6px 0 10px">Progress to Incentive</h3>
       <div class="barWrap">
         <div class="bar" id="bar">
-          <div class="fill" id="barFill" style="width:0%"></div>
+          <div class="seg seg1" id="seg1" style="left:0%;width:0%"></div>
+          <div class="seg seg2" id="seg2" style="left:0%;width:0%"></div>
+          <div class="seg seg3" id="seg3" style="left:0%;width:0%"></div>
+          <!-- tick lines -->
+          <div class="tick" id="tick0"  style="left:0%"></div>
+          <div class="tick" id="tickA"  style="left:0%"></div>
+          <div class="tick" id="tickN1" style="left:0%"></div>
+          <div class="tick" id="tickN2" style="left:0%"></div>
         </div>
-        <div class="labelsAbs" id="barLabels"></div>
+        <div class="labelsAbs" id="barLabels">
+          <span id="lab0"  style="left:0%">₹0</span>
+          <span id="labA"  style="left:0%">—</span>
+          <span id="labN1" style="left:0%">—</span>
+          <span id="labN2" style="left:0%">—</span>
+        </div>
       </div>
       <div id="nearMiss" class="callout">⚠️ <b>Don’t leave money on the table:</b> You’re <span id="missAmt"></span> away from 95%.</div>
     </div>
 
-    <!-- Results -->
+    <!-- Results (Next Slab row removed) -->
     <div class="card" id="results" style="display:none">
       <h3 style="margin:6px 0 12px">Your Incentive Snapshot</h3>
       <div class="stat"><span>Achievement %</span><b id="outPct">—</b></div>
       <div class="stat"><span>Current Incentive</span><b id="outIncentive">—</b></div>
-      <div class="stat"><span>Next Slab @</span><b id="outNextSlab">—</b></div>
       <div class="stat"><span>Do more to reach next slab</span><b id="outGap">—</b></div>
       <div class="stat"><span>Incentive at next slab</span><b id="outNextInc">—</b></div>
       <p class="muted" id="outMsg" style="margin-top:8px"></p>
     </div>
 
-    <!-- Speedometer (working) -->
+    <!-- Incentive Slabs (renamed heading) -->
     <div class="gauge">
-      <h3 style="margin:6px 0 6px">Incentive Speedometer</h3>
-      <svg viewBox="-110 -120 220 170" id="gaugeSvg" aria-label="Speedometer">
+      <h3 style="margin:6px 0 6px">Incentive Slabs</h3>
+      <svg viewBox="-110 -120 220 170" id="gaugeSvg" aria-label="Incentive Slabs">
         <g id="zones"></g>
         <g id="pointerGroup" style="pointer-events:none">
           <line id="needle" x1="0" y1="0" x2="72" y2="0" stroke="#111" stroke-width="4" stroke-linecap="round"/>
@@ -132,7 +150,9 @@
       <div class="legend" id="legend"></div>
       <div class="card" style="width:100%;max-width:720px">
         <h4 style="margin:4px 0 6px">Zone details</h4>
-        <div id="zoneBody" class="muted">Tap a colored arc or chip to see absolute ₹ min/max, rate, your gap, and example incentive.</div>
+        <div id="zoneBody" class="muted">
+          Tap a colored arc or chip to see: <b>Minimum incentive at this zone</b> and your <b>Gap to enter this zone</b>.
+        </div>
       </div>
     </div>
   </div>
@@ -144,7 +164,7 @@
   </div>
 
   <script>
-    /* ===== Indian number mask (caret preserved) ===== */
+    /* ========== Indian number mask ========== */
     const INRfmt = new Intl.NumberFormat('en-IN',{maximumFractionDigits:0});
     const INR = new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0});
     const PCT = v => (Math.round(v*10)/10)+'%';
@@ -169,16 +189,16 @@
       el.addEventListener('blur',()=>{el.value=formatIndian(el.value);});
     }
 
-    /* ===== Slabs & colors ===== */
+    /* ========== Slabs (colors kept; rates only for math, not shown) ========== */
     const SLABS = [
-      { name:'Zone 1',  min:0,   max:95,   rate:0.00, color:'#D32F2F', label:'0–95% (No incentive)' },
-      { name:'Zone 2',  min:95,  max:100,  rate:0.01, color:'#F57C00', label:'95–100% (0.5% at exactly 95%)' },
-      { name:'Zone 3',  min:100, max:115,  rate:0.025,color:'#F9A825', label:'100–115%' },
-      { name:'Zone 4',  min:115, max:125,  rate:0.035,color:'#C0CA33', label:'115–125%' },
-      { name:'Zone 5',  min:125, max:150,  rate:0.04, color:'#8BC34A', label:'125–150%' },
-      { name:'Zone 6',  min:150, max:200,  rate:0.05, color:'#66BB6A', label:'150–200%' },
-      { name:'Zone 7',  min:200, max:300,  rate:0.06, color:'#2E7D32', label:'200–300%' },
-      { name:'Zone 8',  min:300, max:9999, rate:0.08, color:'#00695C', label:'300%+' }
+      { name:'Zone 1',  min:0,   max:95,   rate:0.00, color:'#D32F2F' },
+      { name:'Zone 2',  min:95,  max:100,  rate:0.01, color:'#F57C00' },
+      { name:'Zone 3',  min:100, max:115,  rate:0.025,color:'#F9A825' },
+      { name:'Zone 4',  min:115, max:125,  rate:0.035,color:'#C0CA33' },
+      { name:'Zone 5',  min:125, max:150,  rate:0.04, color:'#8BC34A' },
+      { name:'Zone 6',  min:150, max:200,  rate:0.05, color:'#66BB6A' },
+      { name:'Zone 7',  min:200, max:300,  rate:0.06, color:'#2E7D32' },
+      { name:'Zone 8',  min:300, max:9999, rate:0.08, color:'#00695C' }
     ];
     const BOUNDS=[0,95,100,115,125,150,200,300];
     const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
@@ -218,50 +238,87 @@
       return 7;
     }
 
-    /* ===== Dynamic Progress Bar: show only [0, 95, current zone min, next zone min] ===== */
-    function ceilingForProgress(pct){
-      if (pct < 95) return 95;
-      if (pct < 100) return 115;
-      if (pct < 115) return 115;
-      if (pct < 125) return 125;
-      if (pct < 150) return 150;
-      if (pct < 200) return 200;
-      if (pct < 300) return 300;
-      return 300;
+    /* ========== Progress Bar (absolute ₹ segments) ========== */
+    // Given achievement pct, return next slab min & max (pct)
+    function getNextSlabBounds(pct, exactly95){
+      // Map current slab to the *next* slab's min/max
+      if (pct < 95)   return {nmin:95,  nmax:100};
+      if (exactly95)  return {nmin:100, nmax:115};
+      if (pct < 100)  return {nmin:100, nmax:115};
+      if (pct < 115)  return {nmin:115, nmax:125};
+      if (pct < 125)  return {nmin:125, nmax:150};
+      if (pct < 150)  return {nmin:150, nmax:200};
+      if (pct < 200)  return {nmin:200, nmax:300};
+      if (pct < 300)  return {nmin:300, nmax:300};  // cap
+      return {nmin:300, nmax:300};
     }
 
-    // NEW: buildProgressBarCompact → only four labels
-    function buildProgressBarCompact(scaleMaxPct, currentMinPct, nextMinPct, showPlusAtEnd=false){
-      const bar  = document.getElementById('bar');
-      const labs = document.getElementById('barLabels');
-      // wipe
-      [...bar.querySelectorAll('.tick')].forEach(n=>n.remove());
-      labs.innerHTML='';
+    function buildAbsoluteProgress(target, achieved){
+      const bar = document.getElementById('bar');
+      const seg1 = document.getElementById('seg1');
+      const seg2 = document.getElementById('seg2');
+      const seg3 = document.getElementById('seg3');
 
-      // Compose the four labels, remove duplicates, keep those within scale
-      const raw = [0, 95, currentMinPct, nextMinPct].filter(v => v!==null && v!==undefined);
-      const uniq = Array.from(new Set(raw)).filter(v => v<=scaleMaxPct).sort((a,b)=>a-b);
+      const t0 = document.getElementById('tick0');
+      const tA = document.getElementById('tickA');
+      const tN1= document.getElementById('tickN1');
+      const tN2= document.getElementById('tickN2');
 
-      uniq.forEach((p, i)=>{
-        const pos = (p/scaleMaxPct)*100;
-        const t = document.createElement('div');
-        t.className='tick';
-        t.style.left=`calc(${pos}% - 1px)`;
-        bar.appendChild(t);
+      const l0 = document.getElementById('lab0');
+      const lA = document.getElementById('labA');
+      const lN1= document.getElementById('labN1');
+      const lN2= document.getElementById('labN2');
 
-        const sp = document.createElement('span');
-        sp.style.left=`${pos}%`;
-        // If we're at the end and asked to show 300%+ (when user >= 300)
-        if (showPlusAtEnd && p === scaleMaxPct && p === 300) {
-          sp.textContent = '300%+';
-        } else {
-          sp.textContent = p + '%';
-        }
-        labs.appendChild(sp);
-      });
+      const pct = target ? (achieved/target)*100 : 0;
+      const exactly95 = Math.abs(achieved - 0.95*target) < 0.5;
+
+      const {nmin, nmax} = getNextSlabBounds(pct, exactly95);
+
+      const A0   = 0;
+      const Aach = Math.max(0, achieved);
+      const Amin = Math.ceil((nmin/100)*target);
+      const Amax = Math.ceil((nmax/100)*target);
+
+      // Scale max is next slab MAX absolute (cap to avoid infinity)
+      const scaleMax = Amax;
+      const clampAch = Math.min(Aach, scaleMax);
+
+      // Compute left/width percentages
+      const pos = v => (v/scaleMax)*100;
+      const left1 = pos(A0);
+      const left2 = pos(clampAch);
+      const left3 = pos(Amin);
+
+      seg1.style.left = `${left1}%`;
+      seg1.style.width = `${Math.max(0, left2-left1)}%`;
+
+      seg2.style.left = `${left2}%`;
+      seg2.style.width = `${Math.max(0, left3-left2)}%`;
+
+      seg3.style.left = `${left3}%`;
+      seg3.style.width = `${Math.max(0, 100-left3)}%`;
+
+      // Ticks
+      t0.style.left  = `${left1}%`;
+      tA.style.left  = `${left2}%`;
+      tN1.style.left = `${left3}%`;
+      tN2.style.left = `100%`;
+
+      // Labels (₹ absolute; if in final zone, show "300%+" at end)
+      l0.style.left = `${left1}%`;
+      l0.textContent = INR.format(0);
+
+      lA.style.left = `${left2}%`;
+      lA.textContent = INR.format(clampAch);
+
+      lN1.style.left = `${left3}%`;
+      lN1.textContent = INR.format(Amin);
+
+      lN2.style.left = `100%`;
+      lN2.textContent = (nmax===300) ? (pct>=300 ? '300%+' : INR.format(Amax)) : INR.format(Amax);
     }
 
-    /* ===== Speedometer (already working) ===== */
+    /* ========== Incentive Slabs (gauge; already working) ========== */
     const zonesG=document.getElementById('zones');
     const legend=document.getElementById('legend');
     const pointerGroup=document.getElementById('pointerGroup');
@@ -304,30 +361,32 @@
       pointerGroup.setAttribute('transform',`rotate(${ang})`);
     }
 
+    // Zone details (privacy-trimmed): only min incentive & gap
     function showZoneDetails(i){
       const t=parseINR(document.getElementById('target').value);
       const a=parseINR(document.getElementById('achieved').value);
       const b=document.getElementById('zoneBody');
       const z=SLABS[i];
-      if (!t){ b.innerHTML='Enter Target & Achieved to compute absolute amounts.'; return; }
+      if (!t){ b.innerHTML='Enter Target & Achieved to compute values.'; return; }
 
       const minAbs=Math.ceil((z.min/100)*t);
-      const maxAbs=(z.max>=300? null : Math.floor((z.max/100)*t));
-      const gap=Math.max(0,minAbs-a);
-      const rateText=(z.min===95 && z.max===100)?'0.5% at exactly 95%; otherwise 1.0%':(z.rate*100).toFixed(1)+'%';
       const incAt95=Math.floor(0.95*t*0.005);
-      const incAtMin = z.min===95 && z.max===100 ? Math.floor(minAbs*0.01) : Math.floor(minAbs*z.rate);
+      const incAtMin = (z.min===95 && z.max===100)
+        ? Math.floor(minAbs * 0.01)
+        : Math.floor(minAbs * z.rate);
+      const gap=Math.max(0,minAbs-a);
 
-      let html=`<p><b>${z.name}</b> — ${z.label}</p>`;
-      html+=`<p>Achievement range: <b>${z.min}%</b> to <b>${z.max>=300?'300%+':z.max+'%'}</b></p>`;
-      html+=`<p>Absolute range: <b>${INR.format(minAbs)}</b> to <b>${maxAbs?INR.format(maxAbs):'∞'}</b></p>`;
-      if (z.min===95 && z.max===100){ html+=`<p>Rate: <b>${rateText}</b> (Example at 95%: ${INR.format(incAt95)})</p>`; }
-      else { html+=`<p>Rate: <b>${rateText}</b> (Incentive at zone minimum: ${INR.format(incAtMin)})</p>`; }
-      html+=`<p>Gap to enter this zone: <b class="${gap>0?'red':'green'}">${gap>0?INR.format(gap):'You are in / above this zone'}</b></p>`;
-      b.innerHTML=html;
+      let html = `<p><b>${z.name}</b></p>`;
+      if (z.min===95 && z.max===100){
+        html += `<p>Minimum incentive at this zone: <b>${INR.format(incAt95)}</b></p>`;
+      } else {
+        html += `<p>Minimum incentive at this zone: <b>${INR.format(incAtMin)}</b></p>`;
+      }
+      html += `<p>Gap to enter this zone: <b class="${gap>0?'red':'green'}">${gap>0?INR.format(gap):'You are in / above this zone'}</b></p>`;
+      b.innerHTML = html;
     }
 
-    /* ===== Rewards (unchanged) ===== */
+    /* ========== Rewards (unchanged) ========== */
     let lastSlabIdx=-1;
     const REWARD_EMOJIS=['💪','🎉','👏','🥉','🥈','🥇','🏆','👑'];
     function triggerRewardIfSlabAdvanced(pct, exactly95){
@@ -364,7 +423,7 @@
       setTimeout(()=> overlay.classList.remove('show'),2200);
     }
 
-    /* ===== Validation + Calculation ===== */
+    /* ========== Validation + Calculation ========== */
     function validateInputs(){
       const tEl=document.getElementById('target');
       const aEl=document.getElementById('achieved');
@@ -396,11 +455,10 @@
         atNextIncentive=Math.floor(nextAbs*rateNext);
       }
 
-      // Results
+      // Results (without the Next Slab row)
       document.getElementById('results').style.display='block';
       document.getElementById('outPct').innerText=PCT(pct);
       document.getElementById('outIncentive').innerText=INR.format(incentiveNow);
-      document.getElementById('outNextSlab').innerText = nextPct===null ? 'Top slab (300%+)' : `${nextPct}% (${INR.format((nextPct/100)*target)})`;
       document.getElementById('outGap').innerText = nextPct===null ? '—' : INR.format(gap);
       document.getElementById('outNextInc').innerText = nextPct===null ? INR.format(incentiveNow) : INR.format(atNextIncentive);
 
@@ -409,16 +467,8 @@
       if (pct>=93 && pct<95){ miss.style.display='block'; document.getElementById('missAmt').innerText=INR.format(Math.ceil(0.95*target-achieved)); }
       else miss.style.display='none';
 
-      // ===== Compact Progress Bar =====
-      const ceiling = ceilingForProgress(pct);                       // end of current slab (95/115/…/300)
-      const slabIdx = slabIndexForPct(pct, exactly95);
-      const currentMin = Math.min( (SLABS[slabIdx]?.min ?? 0), 300); // current zone min
-      const nextMin = (slabIdx < SLABS.length-1) ? Math.min(SLABS[slabIdx+1].min, 300) : 300; // next zone min
-      const showPlusAtEnd = pct >= 300;                              // when in 300%+ zone
-      buildProgressBarCompact(ceiling, currentMin, nextMin, showPlusAtEnd);
-
-      // Fill width (relative to this compact scale)
-      document.getElementById('barFill').style.width = Math.min(pct/ceiling,1)*100 + '%';
+      // Absolute progress segments
+      buildAbsoluteProgress(target, achieved);
 
       // Gauge pointer
       rotatePointerTo(pct);
@@ -427,7 +477,7 @@
       triggerRewardIfSlabAdvanced(pct, exactly95);
     }
 
-    /* ===== Init ===== */
+    /* ========== Init ========== */
     attachMask('target','err-target');
     attachMask('achieved','err-achieved');
     buildGauge();
@@ -439,3 +489,4 @@
   </script>
 </body>
 </html>
+``
