@@ -6,9 +6,9 @@
   <title>Incentive Calculator</title>
 
   <!-- PWA & Icons (fixed) -->
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  manifest.webmanifest
+  icons/icon-192.png
+  icons/icon-192.png
   <meta name="theme-color" content="#0f4c81"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <!-- Soft anti-indexing -->
@@ -40,7 +40,7 @@
 
     /* ===== Progress Bar (absolute ₹ segments with lakh labels) ===== */
     .barWrap{margin-top:8px}
-    .bar{position:relative;height:18px;border-radius:10px;background:var(--bar-bg);overflow:hidden}
+    .bar{position:relative;height:18px;border-radius:10px;background:#e6eaf0;overflow:hidden}
     .seg{position:absolute;top:0;height:100%}
     .seg1{background:#90caf9}  /* Achieved */
     .seg2{background:#ffe082}  /* To next min */
@@ -86,7 +86,7 @@
 <body>
   <div class="wrap">
     <header>
-      <img src="icons/icon-192.png" alt="App icon" class="logo"/>
+      icons/icon-192.png
       <h1>Incentive Calculator</h1>
     </header>
 
@@ -144,7 +144,7 @@
       <p class="muted" id="outMsg" style="margin-top:8px"></p>
     </div>
 
-    <!-- Incentive Slabs (renamed header) -->
+    <!-- Incentive Slabs -->
     <div class="gauge">
       <h3 style="margin:6px 0 6px">Incentive Slabs</h3>
       <svg viewBox="-110 -120 220 170" id="gaugeSvg" aria-label="Incentive Slabs">
@@ -196,16 +196,14 @@
       el.addEventListener('blur',()=>{el.value=formatIndian(el.value);});
     }
 
-    /* ========== Lakh short formatter for progress labels ========== */
-    // 98,000 → ".98"; 1,00,000 → "1"; 2,30,000 → "2.3"
+    /* ========== Lakh short formatter (up to 2 decimals) ========== */
     function formatLakhShort(valueInRupees){
-      const x = valueInRupees / 100000; // convert to lakhs
+      const x = valueInRupees / 100000; // lakhs
       if (x === 0) return '0';
-      if (x < 1) {
-        return x.toFixed(2).replace(/^0/, ''); // ".98"
-      } else {
-        return x.toFixed(1).replace(/\.0$/, ''); // "2.3" or "2"
-      }
+      let s = x.toFixed(2);
+      s = s.replace(/\.?0+$/, '');       // trim trailing zeros
+      if (x > 0 && x < 1) s = s.replace(/^0/, ''); // drop leading zero for <1
+      return s;
     }
 
     /* ========== Slabs (colors kept; rates only for math, not shown) ========== */
@@ -272,37 +270,24 @@
 
     // Arrange labels over two rows to avoid overlapping
     function arrangeLabelCollisions(container, items){
-      // items: [{el, leftPercent}]
       const width = container.clientWidth || container.getBoundingClientRect().width || 1;
       const minGapPx = 48; // minimum horizontal separation
 
-      // map to pixel positions
       const pts = items.map(it => ({
         el: it.el,
         x: (it.leftPercent/100) * width,
         leftPercent: it.leftPercent
       })).sort((a,b)=>a.x - b.x);
 
-      // Greedy placement into two rows
       let lastXRow0 = -Infinity, lastXRow1 = -Infinity;
       pts.forEach(p => {
-        // prefer row 0; if too close, switch to row 1
-        if (p.x - lastXRow0 >= minGapPx) {
-          p.row = 0; lastXRow0 = p.x;
-        } else if (p.x - lastXRow1 >= minGapPx) {
-          p.row = 1; lastXRow1 = p.x;
-        } else {
-          // still too close: force alternate row and nudge a bit
-          p.row = (lastXRow1 <= lastXRow0) ? 1 : 0;
-        }
+        if (p.x - lastXRow0 >= minGapPx) { p.row = 0; lastXRow0 = p.x; }
+        else if (p.x - lastXRow1 >= minGapPx) { p.row = 1; lastXRow1 = p.x; }
+        else { p.row = (lastXRow1 <= lastXRow0) ? 1 : 0; }
       });
 
-      // Apply vertical rows
-      pts.forEach(p => {
-        p.el.style.top = (p.row === 0 ? '0px' : '16px');
-      });
+      pts.forEach(p => { p.el.style.top = (p.row === 0 ? '0px' : '16px'); });
 
-      // Edge clamping for labels at 0% and 100% (keep them visible)
       pts.forEach(p=>{
         if (p.leftPercent <= 0.5) { p.el.style.transform = 'translateX(0)'; p.el.style.left = '0%'; }
         else if (p.leftPercent >= 99.5) { p.el.style.transform = 'translateX(-100%)'; p.el.style.left = '100%'; }
@@ -354,7 +339,7 @@
       tN1.style.left = `${left3}%`;
       tN2.style.left = `100%`;
 
-      // Labels (Lakh short). Keep "300%+" only if truly in final zone.
+      // Labels (Lakhs up to 2 decimals). Keep "300%+" only if truly in final zone.
       l0.style.left = `${left1}%`; l0.textContent = formatLakhShort(0);
       lA.style.left = `${left2}%`; lA.textContent = formatLakhShort(clampAch);
       lN1.style.left = `${left3}%`; lN1.textContent = formatLakhShort(Amin);
@@ -439,7 +424,7 @@
       b.innerHTML = html;
     }
 
-    /* ========== Rewards (unchanged) ========== */
+    /* ========== Rewards ========== */
     let lastSlabIdx=-1;
     const REWARD_EMOJIS=['💪','🎉','👏','🥉','🥈','🥇','🏆','👑'];
     function triggerRewardIfSlabAdvanced(pct, exactly95){
@@ -520,7 +505,7 @@
       if (pct>=93 && pct<95){ miss.style.display='block'; document.getElementById('missAmt').innerText=INR.format(Math.ceil(0.95*target-achieved)); }
       else miss.style.display='none';
 
-      // Absolute progress segments (with lakh labels + collision avoidance)
+      // Progress absolute segments with lakh labels and collision avoidance
       buildAbsoluteProgress(target, achieved);
 
       // Gauge pointer
@@ -542,4 +527,3 @@
   </script>
 </body>
 </html>
-``
