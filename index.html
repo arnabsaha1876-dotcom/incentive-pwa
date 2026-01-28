@@ -38,15 +38,22 @@
     .btn{width:100%;padding:12px 16px;background:var(--brand);color:#fff;border:0;border-radius:10px;font-size:16px}
     .muted{color:var(--muted);font-size:12px}
 
-    /* ===== Progress Bar (absolute ₹ segments) ===== */
+    /* ===== Progress Bar (absolute ₹ segments with lakh labels) ===== */
     .barWrap{margin-top:8px}
     .bar{position:relative;height:18px;border-radius:10px;background:var(--bar-bg);overflow:hidden}
     .seg{position:absolute;top:0;height:100%}
     .seg1{background:#90caf9}  /* Achieved */
     .seg2{background:#ffe082}  /* To next min */
     .seg3{background:#c8e6c9}  /* Next slab span */
-    .labelsAbs{position:relative;height:18px;margin-top:6px}
-    .labelsAbs span{position:absolute;transform:translateX(-50%);top:0;font-size:11px;color:var(--muted);white-space:nowrap}
+
+    /* Labels container: taller to allow two rows for collision avoidance */
+    .labelsAbs{position:relative;height:30px;margin-top:6px}
+    .labelsAbs span{
+      position:absolute; left:0; top:0;
+      transform:translateX(-50%);
+      font-size:11px; color:var(--muted); white-space:nowrap;
+      background:rgba(255,255,255,0.6); padding:0 2px; border-radius:3px;
+    }
     .tick{position:absolute;top:0;height:100%;width:2px;background:#ffffffaa}
 
     .callout{border-left:4px solid #ef6c00;background:#fff7ed;color:#7c3f10;padding:8px 10px;border-radius:8px;margin-top:12px;font-size:14px;display:none}
@@ -79,7 +86,7 @@
 <body>
   <div class="wrap">
     <header>
-      <img class="logo" src="icons/icon-192.png" alt="Logo" onerror="this.style.display='none'"/>
+      <img src="icons/icon-192.png" alt="App icon" class="logo"/>
       <h1>Incentive Calculator</h1>
     </header>
 
@@ -103,9 +110,9 @@
       <p class="muted">Numbers auto‑format in Indian style (e.g., 10,00,000). Save to your home screen.</p>
     </div>
 
-    <!-- Progress (absolute ₹ segments) -->
+    <!-- Progress (absolute ₹ segments with lakh labels) -->
     <div class="card">
-      <h3 style="margin:6px 0 10px">Progress to Incentive</h3>
+      <h3 style="margin:6px 0 10px">Progress to Incentives (in Lacs)</h3>
       <div class="barWrap">
         <div class="bar" id="bar">
           <div class="seg seg1" id="seg1" style="left:0%;width:0%"></div>
@@ -118,7 +125,7 @@
           <div class="tick" id="tickN2" style="left:0%"></div>
         </div>
         <div class="labelsAbs" id="barLabels">
-          <span id="lab0"  style="left:0%">₹0</span>
+          <span id="lab0"  style="left:0%">0</span>
           <span id="labA"  style="left:0%">—</span>
           <span id="labN1" style="left:0%">—</span>
           <span id="labN2" style="left:0%">—</span>
@@ -137,7 +144,7 @@
       <p class="muted" id="outMsg" style="margin-top:8px"></p>
     </div>
 
-    <!-- Incentive Slabs (renamed heading) -->
+    <!-- Incentive Slabs (renamed header) -->
     <div class="gauge">
       <h3 style="margin:6px 0 6px">Incentive Slabs</h3>
       <svg viewBox="-110 -120 220 170" id="gaugeSvg" aria-label="Incentive Slabs">
@@ -187,6 +194,18 @@
         const f=formatIndian(raw); el.value=f; const nc=caretFromDigits(f,dB); el.setSelectionRange(nc,nc);
       });
       el.addEventListener('blur',()=>{el.value=formatIndian(el.value);});
+    }
+
+    /* ========== Lakh short formatter for progress labels ========== */
+    // 98,000 → ".98"; 1,00,000 → "1"; 2,30,000 → "2.3"
+    function formatLakhShort(valueInRupees){
+      const x = valueInRupees / 100000; // convert to lakhs
+      if (x === 0) return '0';
+      if (x < 1) {
+        return x.toFixed(2).replace(/^0/, ''); // ".98"
+      } else {
+        return x.toFixed(1).replace(/\.0$/, ''); // "2.3" or "2"
+      }
     }
 
     /* ========== Slabs (colors kept; rates only for math, not shown) ========== */
@@ -239,9 +258,7 @@
     }
 
     /* ========== Progress Bar (absolute ₹ segments) ========== */
-    // Given achievement pct, return next slab min & max (pct)
     function getNextSlabBounds(pct, exactly95){
-      // Map current slab to the *next* slab's min/max
       if (pct < 95)   return {nmin:95,  nmax:100};
       if (exactly95)  return {nmin:100, nmax:115};
       if (pct < 100)  return {nmin:100, nmax:115};
@@ -249,12 +266,51 @@
       if (pct < 125)  return {nmin:125, nmax:150};
       if (pct < 150)  return {nmin:150, nmax:200};
       if (pct < 200)  return {nmin:200, nmax:300};
-      if (pct < 300)  return {nmin:300, nmax:300};  // cap
+      if (pct < 300)  return {nmin:300, nmax:300};
       return {nmin:300, nmax:300};
     }
 
+    // Arrange labels over two rows to avoid overlapping
+    function arrangeLabelCollisions(container, items){
+      // items: [{el, leftPercent}]
+      const width = container.clientWidth || container.getBoundingClientRect().width || 1;
+      const minGapPx = 48; // minimum horizontal separation
+
+      // map to pixel positions
+      const pts = items.map(it => ({
+        el: it.el,
+        x: (it.leftPercent/100) * width,
+        leftPercent: it.leftPercent
+      })).sort((a,b)=>a.x - b.x);
+
+      // Greedy placement into two rows
+      let lastXRow0 = -Infinity, lastXRow1 = -Infinity;
+      pts.forEach(p => {
+        // prefer row 0; if too close, switch to row 1
+        if (p.x - lastXRow0 >= minGapPx) {
+          p.row = 0; lastXRow0 = p.x;
+        } else if (p.x - lastXRow1 >= minGapPx) {
+          p.row = 1; lastXRow1 = p.x;
+        } else {
+          // still too close: force alternate row and nudge a bit
+          p.row = (lastXRow1 <= lastXRow0) ? 1 : 0;
+        }
+      });
+
+      // Apply vertical rows
+      pts.forEach(p => {
+        p.el.style.top = (p.row === 0 ? '0px' : '16px');
+      });
+
+      // Edge clamping for labels at 0% and 100% (keep them visible)
+      pts.forEach(p=>{
+        if (p.leftPercent <= 0.5) { p.el.style.transform = 'translateX(0)'; p.el.style.left = '0%'; }
+        else if (p.leftPercent >= 99.5) { p.el.style.transform = 'translateX(-100%)'; p.el.style.left = '100%'; }
+        else { p.el.style.transform = 'translateX(-50%)'; }
+      });
+    }
+
     function buildAbsoluteProgress(target, achieved){
-      const bar = document.getElementById('bar');
       const seg1 = document.getElementById('seg1');
       const seg2 = document.getElementById('seg2');
       const seg3 = document.getElementById('seg3');
@@ -279,24 +335,18 @@
       const Amin = Math.ceil((nmin/100)*target);
       const Amax = Math.ceil((nmax/100)*target);
 
-      // Scale max is next slab MAX absolute (cap to avoid infinity)
-      const scaleMax = Amax;
+      const scaleMax = Amax || 1;
       const clampAch = Math.min(Aach, scaleMax);
 
-      // Compute left/width percentages
       const pos = v => (v/scaleMax)*100;
       const left1 = pos(A0);
       const left2 = pos(clampAch);
       const left3 = pos(Amin);
 
-      seg1.style.left = `${left1}%`;
-      seg1.style.width = `${Math.max(0, left2-left1)}%`;
-
-      seg2.style.left = `${left2}%`;
-      seg2.style.width = `${Math.max(0, left3-left2)}%`;
-
-      seg3.style.left = `${left3}%`;
-      seg3.style.width = `${Math.max(0, 100-left3)}%`;
+      // Segments
+      seg1.style.left = `${left1}%`; seg1.style.width = `${Math.max(0, left2-left1)}%`;
+      seg2.style.left = `${left2}%`; seg2.style.width = `${Math.max(0, left3-left2)}%`;
+      seg3.style.left = `${left3}%`; seg3.style.width = `${Math.max(0, 100-left3)}%`;
 
       // Ticks
       t0.style.left  = `${left1}%`;
@@ -304,21 +354,24 @@
       tN1.style.left = `${left3}%`;
       tN2.style.left = `100%`;
 
-      // Labels (₹ absolute; if in final zone, show "300%+" at end)
-      l0.style.left = `${left1}%`;
-      l0.textContent = INR.format(0);
-
-      lA.style.left = `${left2}%`;
-      lA.textContent = INR.format(clampAch);
-
-      lN1.style.left = `${left3}%`;
-      lN1.textContent = INR.format(Amin);
-
+      // Labels (Lakh short). Keep "300%+" only if truly in final zone.
+      l0.style.left = `${left1}%`; l0.textContent = formatLakhShort(0);
+      lA.style.left = `${left2}%`; lA.textContent = formatLakhShort(clampAch);
+      lN1.style.left = `${left3}%`; lN1.textContent = formatLakhShort(Amin);
       lN2.style.left = `100%`;
-      lN2.textContent = (nmax===300) ? (pct>=300 ? '300%+' : INR.format(Amax)) : INR.format(Amax);
+      lN2.textContent = (nmax===300 && pct>=300) ? '300%+' : formatLakhShort(Amax);
+
+      // Collision avoidance (two-row layout)
+      const labelsContainer = document.getElementById('barLabels');
+      arrangeLabelCollisions(labelsContainer, [
+        { el: l0,  leftPercent: left1 },
+        { el: lA,  leftPercent: left2 },
+        { el: lN1, leftPercent: left3 },
+        { el: lN2, leftPercent: 100 }
+      ]);
     }
 
-    /* ========== Incentive Slabs (gauge; already working) ========== */
+    /* ========== Incentive Slabs (gauge) ========== */
     const zonesG=document.getElementById('zones');
     const legend=document.getElementById('legend');
     const pointerGroup=document.getElementById('pointerGroup');
@@ -455,7 +508,7 @@
         atNextIncentive=Math.floor(nextAbs*rateNext);
       }
 
-      // Results (without the Next Slab row)
+      // Results
       document.getElementById('results').style.display='block';
       document.getElementById('outPct').innerText=PCT(pct);
       document.getElementById('outIncentive').innerText=INR.format(incentiveNow);
@@ -467,7 +520,7 @@
       if (pct>=93 && pct<95){ miss.style.display='block'; document.getElementById('missAmt').innerText=INR.format(Math.ceil(0.95*target-achieved)); }
       else miss.style.display='none';
 
-      // Absolute progress segments
+      // Absolute progress segments (with lakh labels + collision avoidance)
       buildAbsoluteProgress(target, achieved);
 
       // Gauge pointer
