@@ -1,1351 +1,707 @@
 <!DOCTYPE html>
-
 <html lang="en">
-
 <head>
-
   <meta charset="utf-8"/>
-
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-
   <title>Incentive Calculator</title>
 
- 
-
   <!-- Proper PWA & Icons -->
-
   <link rel="manifest" href="manifest.webmanifest">
-
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-
   <meta name="theme-color" content="#0f4c81"/>
-
   <meta name="apple-mobile-web-app-capable" content="yes"/>
-
   <meta name="robots" content="noindex,nofollow"/>
 
- 
-
   <style>
-
     :root{
-
       --brand:#0f4c81;
-
       --bg:#f6f8fb; --card:#fff; --txt:#1f2937; --muted:#64748b;
-
       --bar-bg:#e6eaf0;
-
     }
-
     *{box-sizing:border-box}
-
     html,body{margin:0;padding:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
-
     .wrap{max-width:960px;margin:0 auto;padding:16px 12px 80px}
-
     header{display:flex;align-items:center;gap:10px;margin:4px 0 12px}
-
     header h1{font-size:20px;margin:0}
-
     .logo{width:24px;height:24px;border-radius:6px}
 
- 
-
     .card{background:var(--card);border:1px solid #e7ebf0;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);padding:14px;margin:10px 0}
-
     .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-
     @media (max-width:720px){.row{grid-template-columns:1fr}}
-
     label{font-size:13px;color:#334155;margin-bottom:6px;display:block}
-
     .req::after{content:" *";color:#b91c1c}
-
     input[type=text], input[type=password]{width:100%;padding:12px 14px;border:1px solid #cbd5e1;border-radius:10px;font-size:16px}
-
     input.err{border-color:#ef4444;background:#fff1f2}
-
     .err-text{color:#b91c1c;font-size:12px;margin-top:6px;display:none}
-
     .btn{width:100%;padding:12px 16px;background:var(--brand);color:#fff;border:0;border-radius:10px;font-size:16px;cursor:pointer}
-
     .muted{color:var(--muted);font-size:12px}
 
- 
-
     /* ===== Progress Bar (absolute ₹ segments with lakh labels) ===== */
-
     .barWrap{margin-top:8px}
-
     .bar{position:relative;height:18px;border-radius:10px;background:#e6eaf0;overflow:hidden}
-
     .seg{position:absolute;top:0;height:100%}
-
     .seg1{background:#90caf9}  /* Achieved */
-
     .seg2{background:#ffe082}  /* To next min */
-
     .seg3{background:#c8e6c9}  /* Next slab span */
 
- 
-
     .labelsAbs{position:relative;height:30px;margin-top:6px}
-
     .labelsAbs span{
-
       position:absolute; left:0; top:0;
-
       transform:translateX(-50%);
-
       font-size:11px; color:var(--muted); white-space:nowrap;
-
       background:rgba(255,255,255,0.6); padding:0 2px; border-radius:3px;
-
     }
-
     .tick{position:absolute;top:0;height:100%;width:2px;background:#ffffffaa}
-
- 
 
     .callout{border-left:4px solid #ef6c00;background:#fff7ed;color:#7c3f10;padding:8px 10px;border-radius:8px;margin-top:12px;font-size:14px;display:none}
 
- 
-
-    /* ===== Incentive Slabs (gauge) ===== */
-
-    .gauge{position:relative;background:var(--card);border:1px solid #e7ebf0;border-radius:12px;padding:10px;display:flex;flex-direction:column;align-items:center}
-
-    svg{max-width:520px;width:100%;height:auto}
-
-    .pointer{transform-origin:0 0;transition:transform .5s ease}
-
-    .legend{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:8px}
-
-    .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid #e5e7eb;border-radius:999px;padding:6px 10px;font-size:12px;background:#fff;cursor:pointer}
-
-    .chip .dot{width:10px;height:10px;border-radius:50%}
-
- 
-
-    /* Results */
-
-    .stat{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed #e5e7eb}
-
-    .stat:last-child{border-bottom:0}
-
-    .stat b{font-size:16px}
-
-    .green{color:#1b5e20}
-
-    .red{color:#b91c1c}
-
- 
-
-    /* Rewards */
-
-    .reward{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.15);z-index:10}
-
-    .reward.show{display:grid}
-
-    .stage{position:relative;width:100%;height:100%}
-
-    .confetti{position:absolute;top:-10px;width:10px;height:16px;opacity:.9;animation:fall linear forwards}
-
-    @keyframes fall{to{transform:translateY(110vh) rotate(720deg);opacity:1}}
-
-    .big-emoji{position:absolute;inset:auto 0 18% 0;text-align:center;font-size:56px;filter:drop-shadow(0 3px 8px rgba(0,0,0,.25))}
-
-    .nudge{background:#fff3cd;border:1px solid #ffe08a;color:#7a5b00;padding:8px 12px;border-radius:10px}
-
- 
-
-    /* ===== Password Gate Overlay (soft) ===== */
-
-    .gate{position:fixed; inset:0; background:linear-gradient(180deg, rgba(15,76,129,.08), rgba(0,0,0,.05));
-
-      display:grid; place-items:center; z-index:9999; padding:16px;}
-
-    .gate .panel{width:100%; max-width:420px; background:#fff; border:1px solid #e7ebf0; border-radius:12px;
-
-      box-shadow:0 6px 30px rgba(0,0,0,.08); padding:16px 16px 18px;}
-
-    .gate h2{margin:6px 0 10px; font-size:20px}
-
-    .gate .hint{font-size:12px; color:#64748b}
-
-    .gate .err{color:#b91c1c; font-size:13px; display:none; margin-top:6px}
-
-    .gate .actions{display:flex; gap:8px; margin-top:10px}
-
-    .gate .btn-sec{background:#e2e8f0; color:#111}
-
- 
-
     /* ===== Milestone Table ===== */
-
     .tableWrap{overflow:auto}
-
     table.milestone{width:100%; border-collapse:collapse; font-size:14px}
-
     table.milestone th, table.milestone td{
-
       border:1px solid #e5e7eb; padding:8px 10px; text-align:left; vertical-align:middle;
-
     }
-
     table.milestone thead th{background:#f8fafc; font-weight:600}
-
     table.milestone tbody tr:nth-child(even){background:#fafafa}
-
     .noteHdr{margin:4px 0 10px; color:#475569; font-size:13px}
 
-    .slCell{width:52px; text-align:center; font-weight:600}
-
- 
-
-    /* slab color shades (amber → green) used only from current slab onwards */
-
+    /* slab color shades (amber → green), applied from current slab onward */
     .shade1{background:#F7BD72 !important}
-
     .shade2{background:#FAD481 !important}
-
     .shade3{background:#FCE68A !important}
-
     .shade4{background:#D9F99D !important}
-
     .shade5{background:#BBF7D0 !important}
-
     .shade6{background:#86EFAC !important}
-
     .shade7{background:#4ADE80 !important}
-
     .shade8{background:#22C55E !important}
 
+    /* ===== Incentive Slabs gauge ===== */
+    .gauge{position:relative;background:var(--card);border:1px solid #e7ebf0;border-radius:12px;padding:10px;display:flex;flex-direction:column;align-items:center}
+    svg{max-width:520px;width:100%;height:auto}
+    .pointer{transform-origin:0 0;transition:transform .5s ease}
+    .legend{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:8px}
+    .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid #e5e7eb;border-radius:999px;padding:6px 10px;font-size:12px;background:#fff;cursor:pointer}
+    .chip .dot{width:10px;height:10px;border-radius:50%}
+
+    /* Results */
+    .stat{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed #e5e7eb}
+    .stat:last-child{border-bottom:0}
+    .stat b{font-size:16px}
+    .green{color:#1b5e20}
+    .red{color:#b91c1c}
+
+    /* Rewards */
+    .reward{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.15);z-index:10}
+    .reward.show{display:grid}
+    .stage{position:relative;width:100%;height:100%}
+    .confetti{position:absolute;top:-10px;width:10px;height:16px;opacity:.9;animation:fall linear forwards}
+    @keyframes fall{to{transform:translateY(110vh) rotate(720deg);opacity:1}}
+    .big-emoji{position:absolute;inset:auto 0 18% 0;text-align:center;font-size:56px;filter:drop-shadow(0 3px 8px rgba(0,0,0,.25))}
+    .nudge{background:#fff3cd;border:1px solid #ffe08a;color:#7a5b00;padding:8px 12px;border-radius:10px}
+
+    /* ===== Password Gate Overlay (soft) ===== */
+    .gate{
+      position:fixed; inset:0; background:linear-gradient(180deg, rgba(15,76,129,.08), rgba(0,0,0,.05));
+      display:grid; place-items:center; z-index:9999; padding:16px;
+    }
+    .gate .panel{
+      width:100%; max-width:420px; background:#fff; border:1px solid #e7ebf0; border-radius:12px;
+      box-shadow:0 6px 30px rgba(0,0,0,.08); padding:16px 16px 18px;
+    }
+    .gate h2{margin:6px 0 10px; font-size:20px}
+    .gate .hint{font-size:12px; color:#64748b}
+    .gate .err{color:#b91c1c; font-size:13px; display:none; margin-top:6px}
+    .gate .actions{display:flex; gap:8px; margin-top:10px}
+    .gate .btn-sec{background:#e2e8f0; color:#111}
   </style>
-
 </head>
-
 <body>
 
- 
-
   <!-- ===== Password Gate (soft) ===== -->
-
   <div class="gate" id="pwdGate" style="display:none">
-
     <div class="panel">
-
       <h2>Enter Access Password</h2>
-
       <p class="hint">This portal is for internal use. Contact your manager for the current password.</p>
-
       <label style="display:block;margin-top:10px;font-size:13px;color:#334155">Password</label>
-
       <input id="pwdInput" type="password" inputmode="text" placeholder="Enter password" autocomplete="current-password"/>
-
       <div id="pwdErr" class="err">Wrong password. Please try again.</div>
-
       <div class="actions">
-
         <button class="btn" id="pwdBtn">Unlock</button>
-
         <button class="btn btn-sec" id="pwdClear">Clear</button>
-
       </div>
-
     </div>
-
   </div>
-
- 
 
   <!-- ===== Main App ===== -->
-
   <div class="wrap" id="appRoot" style="visibility:hidden">
-
     <header>
-
-      <img src="icons/icon-192.png" alt="logo" class="logo">
-
+      <img src="icons/icon-192.png" alt="Logo" class="logo"/>
       <h1>Incentive Calculator</h1>
-
     </header>
 
- 
-
     <!-- Inputs -->
-
     <div class="card">
-
       <div class="row">
-
         <div>
-
           <label class="req">🎯 Monthly Target (₹)</label>
-
-          <input id="target" type="text" inputmode="numeric" placeholder="e.g., 1,00,000"/>
-
+          <input id="target" type="text" inputmode="decimal" placeholder="e.g., 1,00,000.00"/>
           <div class="err-text" id="err-target">Please enter your monthly target.</div>
-
         </div>
-
         <div>
-
           <label class="req">✅ Achieved So Far (₹)</label>
-
-          <input id="achieved" type="text" inputmode="numeric" placeholder="e.g., 97,000"/>
-
+          <input id="achieved" type="text" inputmode="decimal" placeholder="e.g., 97,000.50"/>
           <div class="err-text" id="err-achieved">Please enter your achieved amount.</div>
-
         </div>
-
       </div>
-
       <div style="margin-top:10px">
-
         <button class="btn" id="btnCalc">Show My Incentives</button>
-
       </div>
-
-      <p class="muted">Numbers auto‑format in Indian style (e.g., 10,00,000). Save to your home screen.</p>
-
+      <p class="muted">Numbers accept decimals and auto‑format in Indian style (up to 2 places).</p>
     </div>
-
- 
 
     <!-- Progress (absolute ₹ segments with lakh labels) -->
-
     <div class="card">
-
       <h3 style="margin:6px 0 10px">Progress to Incentives (in Lacs)</h3>
-
       <div class="barWrap">
-
         <div class="bar" id="bar">
-
           <div class="seg seg1" id="seg1" style="left:0%;width:0%"></div>
-
           <div class="seg seg2" id="seg2" style="left:0%;width:0%"></div>
-
           <div class="seg seg3" id="seg3" style="left:0%;width:0%"></div>
-
           <!-- tick lines -->
-
           <div class="tick" id="tick0"  style="left:0%"></div>
-
           <div class="tick" id="tickA"  style="left:0%"></div>
-
           <div class="tick" id="tickN1" style="left:0%"></div>
-
           <div class="tick" id="tickN2" style="left:0%"></div>
-
         </div>
-
         <div class="labelsAbs" id="barLabels">
-
           <span id="lab0"  style="left:0%">0</span>
-
           <span id="labA"  style="left:0%">—</span>
-
           <span id="labN1" style="left:0%">—</span>
-
           <span id="labN2" style="left:0%">—</span>
-
         </div>
-
       </div>
-
       <div id="nearMiss" class="callout">⚠️ <b>Don’t leave money on the table:</b> You’re <span id="missAmt"></span> away from 95%.</div>
-
     </div>
-
- 
 
     <!-- Results -->
-
     <div class="card" id="results" style="display:none">
-
       <h3 style="margin:6px 0 12px">Your Incentive Snapshot</h3>
-
       <div class="stat"><span>Achievement %</span><b id="outPct">—</b></div>
-
       <div class="stat"><span>Current Incentive</span><b id="outIncentive">—</b></div>
-
       <div class="stat"><span>Do more to reach next slab</span><b id="outGap">—</b></div>
-
       <div class="stat"><span>Incentive at next slab</span><b id="outNextInc">—</b></div>
-
       <p class="muted" id="outMsg" style="margin-top:8px"></p>
-
     </div>
 
- 
-
-    <!-- Incentive Slabs (gauge) -->
-
-    <div class="gauge">
-
-      <h3 style="margin:6px 0 6px">Incentive Slabs</h3>
-
-      <svg viewBox="-110 -120 220 170" id="gaugeSvg" aria-label="Incentive Slabs">
-
-        <g id="zones"></g>
-
-        <g id="pointerGroup" style="pointer-events:none">
-
-          <line id="needle" x1="0" y1="0" x2="72" y2="0" stroke="#111" stroke-width="4" stroke-linecap="round"/>
-
-          <circle cx="0" cy="0" r="5" fill="#111"/>
-
-        </g>
-
-      </svg>
-
-      <div class="legend" id="legend"></div>
-
-      <div class="card" style="width:100%;max-width:720px">
-
-        <h4 style="margin:4px 0 6px">Zone details</h4>
-
-        <div id="zoneBody" class="muted">
-
-          Tap a colored arc or chip to see: <b>Minimum incentive at this zone</b> and your <b>Gap to enter this zone</b>.
-
-        </div>
-
-      </div>
-
-    </div>
-
- 
-
-    <!-- Milestones & Minimum Incentives Table -->
-
+    <!-- ===== Milestones & Minimum Incentives (moved ABOVE gauge) ===== -->
     <div class="card">
-
       <h3 style="margin:6px 0 8px">Milestones & Minimum Incentives</h3>
-
       <p class="noteHdr" id="milestoneNote">Example Total Target = — | Achievement = —</p>
-
       <div class="tableWrap">
-
         <table class="milestone" id="milestoneTable" aria-label="Milestones table">
-
           <thead>
-
             <tr>
-
-              <th class="slCell">Sl.</th>
-
-              <th>Next Milestone</th>
-
-              <th>Incentive You can unlock</th>
-
+              <th style="width:34%">Earning Slab</th>
+              <th style="width:33%">Next Milestone</th>
+              <th style="width:33%">Incentive You can unlock</th>
             </tr>
-
           </thead>
-
           <tbody id="milestoneBody"></tbody>
-
         </table>
-
       </div>
-
     </div>
 
- 
+    <!-- ===== Incentive Slabs (gauge moved to BOTTOM) ===== -->
+    <div class="card gauge">
+      <h3 style="margin:6px 0 6px">Incentive Slabs</h3>
+      <svg viewBox="-110 -120 220 170" id="gaugeSvg" aria-label="Incentive Slabs">
+        <g id="zones"></g>
+        <g id="pointerGroup" style="pointer-events:none">
+          <line id="needle" x1="0" y1="0" x2="72" y2="0" stroke="#111" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="0" cy="0" r="5" fill="#111"/>
+        </g>
+      </svg>
+      <div class="legend" id="legend"></div>
+      <div class="card" style="width:100%;max-width:720px">
+        <h4 style="margin:4px 0 6px">Zone details</h4>
+        <div id="zoneBody" class="muted">
+          Tap a colored arc or chip to see: <b>Minimum incentive at this zone</b> and your <b>Gap to enter this zone</b>.
+        </div>
+      </div>
+    </div>
 
+    <!-- Disclaimer -->
+    <p class="muted" style="text-align:center;margin-top:10px"><b>*Subject to Incentive Criteria</b></p>
   </div>
-
- 
 
   <!-- Rewards overlay -->
-
   <div class="reward" id="reward">
-
     <div class="stage" id="stage"></div>
-
     <div class="big-emoji" id="rewardEmoji">🎉</div>
-
   </div>
 
- 
-
   <script>
-
     /* ============================
-
        SIMPLE PASSWORD GATE (soft)
-
        ============================ */
-
     const PASSWORD = "Tanmoy";   // ← admin: change here
-
     const SESSION_KEY = "ic_unlocked_simple_v1";
-
     function showSimpleGate(){
-
       const gate = document.getElementById('pwdGate');
-
       const app  = document.getElementById('appRoot');
-
       app.style.visibility = 'hidden';
-
       gate.style.display = 'grid';
-
       const input = document.getElementById('pwdInput');
-
       const btn   = document.getElementById('pwdBtn');
-
       const clr   = document.getElementById('pwdClear');
-
       const err   = document.getElementById('pwdErr');
-
       btn.onclick = () => {
-
         const entered = (input.value || "").trim();
-
         if (entered === PASSWORD){
-
           sessionStorage.setItem(SESSION_KEY, '1');
-
           gate.style.display = 'none';
-
           app.style.visibility = 'visible';
-
           initializeApp();
-
         } else { err.style.display = 'block'; }
-
       };
-
       clr.onclick = () => { input.value = ""; err.style.display = 'none'; };
-
     }
-
- 
 
     /* ============================
-
-       APP LOGIC
-
+       Utilities & Formatting
        ============================ */
+    const INR = new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',minimumFractionDigits:0,maximumFractionDigits:2});
+    const PCT2 = v => (Math.round(v*100)/100).toFixed(2) + '%';
+    const onlyNumDot = s => (s||'').replace(/[^0-9.]/g,'').replace(/(\..*)\./g,'$1');
+    const parseINR = s => Number((s||'').replace(/,/g,''));
+    const round2 = x => Math.round(x*100)/100;
 
-    const INRfmt = new Intl.NumberFormat('en-IN',{maximumFractionDigits:0});
-
-    const INR = new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0});
-
-    const PCT = v => (Math.round(v*10)/10)+'%';
-
-    const onlyDigits = s => (s||'').replace(/[^\d]/g,'');
-
-    const parseINR = s => Number(onlyDigits(s));
-
-    function formatIndian(nStr){
-
-      const s = onlyDigits(nStr); if (!s) return '';
-
-      const last3 = s.slice(-3), head = s.slice(0,-3);
-
-      const headFmt = head ? head.replace(/\B(?=(\d{2})+(?!\d))/g,',') : '';
-
-      return headFmt ? headFmt+','+last3 : last3;
-
+    function formatIndianDec(str){
+      if (!str) return '';
+      let raw = onlyNumDot(str);
+      const parts = raw.split('.');
+      if (parts.length>1) parts[1] = parts[1].slice(0,2);
+      let int = parts[0] || '0', dec = parts[1]||'';
+      int = int.replace(/^0+(?=\d)/,'');
+      if (int==='') int='0';
+      const last3 = int.slice(-3);
+      const head = int.slice(0,-3);
+      const headFmt = head ? head.replace(/\B(?=(\d{2})+(?!\d))/g, ',') : '';
+      const outInt = headFmt ? headFmt+','+last3 : last3;
+      return dec ? outInt + '.' + dec : outInt;
     }
-
     function attachMask(inputId, errId){
-
-      const el=document.getElementById(inputId);
-
-      const err=document.getElementById(errId);
-
-      function digitsBeforeCaret(v,c){let d=0;for(let i=0;i<c;i++) if(/\d/.test(v[i])) d++;return d;}
-
-      function caretFromDigits(f,d){if(d<=0) return 0;let c=0;for(let i=0;i<f.length;i++){if(/\d/.test(f[i])) c++; if(c===d) return i+1;} return f.length;}
-
+      const el=document.getElementById(inputId), err=document.getElementById(errId);
       el.addEventListener('focus',()=>{err.style.display='none';el.classList.remove('err');});
-
-      el.addEventListener('input',()=>{
-
-        const raw=el.value, sel=el.selectionStart||raw.length, dB=digitsBeforeCaret(raw,sel);
-
-        const f=formatIndian(raw); el.value=f; const nc=caretFromDigits(f,dB); el.setSelectionRange(nc,nc);
-
-      });
-
-      el.addEventListener('blur',()=>{el.value=formatIndian(el.value);});
-
+      el.addEventListener('input',()=>{ el.value = formatIndianDec(el.value); });
+      el.addEventListener('blur',()=>{ el.value = formatIndianDec(el.value); });
     }
-
     function formatLakhShort(valueInRupees){
-
       const x = valueInRupees / 100000;
-
       if (x === 0) return '0';
-
-      let s = x.toFixed(2);
-
-      s = s.replace(/\.?0+$/, '');
-
-      if (x > 0 && x < 1) s = s.replace(/^0/, '');
-
+      let s = x.toFixed(2).replace(/\.?0+$/,'');
+      if (x > 0 && x < 1) s = s.replace(/^0/,'');
       return s;
-
     }
 
- 
-
+    /* ============================
+       Slabs, Rates & NEW Incentive Formula
+       ============================ */
     const SLABS = [
-
       { name:'Zone 1',  min:0,   max:95,   rate:0.00, color:'#D32F2F' },
-
       { name:'Zone 2',  min:95,  max:100,  rate:0.01, color:'#F57C00' },
-
       { name:'Zone 3',  min:100, max:115,  rate:0.025,color:'#F9A825' },
-
       { name:'Zone 4',  min:115, max:125,  rate:0.035,color:'#C0CA33' },
-
       { name:'Zone 5',  min:125, max:150,  rate:0.04, color:'#8BC34A' },
-
       { name:'Zone 6',  min:150, max:200,  rate:0.05, color:'#66BB6A' },
-
       { name:'Zone 7',  min:200, max:300,  rate:0.06, color:'#2E7D32' },
-
       { name:'Zone 8',  min:300, max:9999, rate:0.08, color:'#00695C' }
-
     ];
 
-    const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
-
- 
-
-    /* ==== 95% edge rules ==== */
-
-    function isExactly95(achieved, target){
-
-      const exact95 = Math.round(0.95*target);
-
-      return achieved === exact95;            // e.g., 95,000 on 1,00,000
-
-    }
-
-    function rateFor(pct, achieved, target){
-
-      if (pct < 95) return 0;
-
-      if (isExactly95(achieved, target)) return 0.005; // 0.5%
-
+    function slabRateAtPct(pct){
+      if (pct <= 95) return 0;
       if (pct < 100) return 0.01;
-
       if (pct < 115) return 0.025;
-
       if (pct < 125) return 0.035;
-
       if (pct < 150) return 0.04;
-
       if (pct < 200) return 0.05;
-
       if (pct < 300) return 0.06;
-
       return 0.08;
-
     }
-
-    // Next milestone absolute amount (₹)
-
-    function nextMilestoneAbs(pct, achieved, target){
-
-      if (pct < 95) return Math.ceil(0.95*target);   // to enter 95%
-
-      if (isExactly95(achieved, target)) return achieved + 1;  // +₹1 to enter 95–100
-
-      if (pct < 100) return Math.ceil(1.00*target);
-
-      if (pct < 115) return Math.ceil(1.15*target);
-
-      if (pct < 125) return Math.ceil(1.25*target);
-
-      if (pct < 150) return Math.ceil(1.50*target);
-
-      if (pct < 200) return Math.ceil(2.00*target);
-
-      if (pct < 300) return Math.ceil(3.00*target);
-
+    function isExactly95(achieved, target){
+      return round2(achieved) === round2(0.95*target);
+    }
+    // NEW sheet-consistent formula
+    function incentiveNew(target, achieved){
+      const base95 = round2(0.95*target);
+      const baseInc = round2(base95 * 0.005);
+      if (achieved < base95 - 0.005) return 0;
+      if (isExactly95(achieved, target)) return baseInc;
+      const pct = (achieved/target)*100;
+      const rate = slabRateAtPct(pct);
+      return round2(baseInc + (achieved - base95) * rate);
+    }
+    function nextMilestoneAbs(achieved, target){
+      const pct = (achieved/target)*100;
+      if (pct < 95)  return round2(Math.ceil(0.95*target*100)/100);
+      if (isExactly95(achieved, target)) return round2(achieved + 1); // +₹1
+      if (pct < 100) return round2(1.00*target);
+      if (pct < 115) return round2(1.15*target);
+      if (pct < 125) return round2(1.25*target);
+      if (pct < 150) return round2(1.50*target);
+      if (pct < 200) return round2(2.00*target);
+      if (pct < 300) return round2(3.00*target);
       return null;
-
     }
-
     function slabIndexForPct(pct, achieved, target){
-
-      if (pct < 95) return -1;                     // no slab yet
-
-      if (isExactly95(achieved, target)) return 0; // slab 1
-
+      if (pct < 95) return -1;
+      if (isExactly95(achieved, target)) return 0;
       if (pct < 100) return 1;
-
       if (pct < 115) return 2;
-
       if (pct < 125) return 3;
-
       if (pct < 150) return 4;
-
       if (pct < 200) return 5;
-
       if (pct < 300) return 6;
-
       return 7;
-
     }
-
-    function getNextSlabBounds(pct, achieved, target){
-
+    function getNextSlabBoundsForBar(pct, achieved, target){
       if (pct < 95)   return {nmin:95,  nmax:100};
-
-      if (isExactly95(achieved, target)) return {nmin:95.0001, nmax:100}; // for bar: 95%→95%+ε
-
+      if (isExactly95(achieved, target)) return {nmin:'+1', nmax:100};
       if (pct < 100)  return {nmin:100, nmax:115};
-
       if (pct < 115)  return {nmin:115, nmax:125};
-
       if (pct < 125)  return {nmin:125, nmax:150};
-
       if (pct < 150)  return {nmin:150, nmax:200};
-
       if (pct < 200)  return {nmin:200, nmax:300};
-
       if (pct < 300)  return {nmin:300, nmax:300};
-
       return {nmin:300, nmax:300};
-
     }
 
- 
-
-    /* ===== Progress absolute bar (3 segments) ===== */
-
+    /* ============================
+       Progress Absolute Bar
+       ============================ */
     function arrangeLabelCollisions(container, items){
-
       const width = container.clientWidth || container.getBoundingClientRect().width || 1;
-
       const minGapPx = 48;
-
       const pts = items.map(it => ({ el: it.el, x: (it.leftPercent/100)*width, leftPercent: it.leftPercent }))
-
                        .sort((a,b)=>a.x - b.x);
-
       let last0=-1e9, last1=-1e9;
-
       pts.forEach(p=>{
-
         if (p.x - last0 >= minGapPx) { p.row=0; last0=p.x; }
-
         else if (p.x - last1 >= minGapPx) { p.row=1; last1=p.x; }
-
         else { p.row = (last1<=last0)?1:0; }
-
       });
-
       pts.forEach(p=>{ p.el.style.top = p.row===0?'0px':'16px'; });
-
       pts.forEach(p=>{
-
         if (p.leftPercent <= 0.5){ p.el.style.transform='translateX(0)'; p.el.style.left='0%'; }
-
         else if (p.leftPercent >= 99.5){ p.el.style.transform='translateX(-100%)'; p.el.style.left='100%'; }
-
         else { p.el.style.transform='translateX(-50%)'; }
-
       });
-
     }
-
     function buildAbsoluteProgress(target, achieved){
-
       const seg1 = document.getElementById('seg1');
-
       const seg2 = document.getElementById('seg2');
-
       const seg3 = document.getElementById('seg3');
-
       const t0 = document.getElementById('tick0');
-
       const tA = document.getElementById('tickA');
-
       const tN1= document.getElementById('tickN1');
-
       const tN2= document.getElementById('tickN2');
-
       const l0 = document.getElementById('lab0');
-
       const lA = document.getElementById('labA');
-
       const lN1= document.getElementById('labN1');
-
       const lN2= document.getElementById('labN2');
 
- 
-
       const pct = target ? (achieved/target)*100 : 0;
-
-      const {nmin, nmax} = getNextSlabBounds(pct, achieved, target);
-
- 
+      const {nmin, nmax} = getNextSlabBoundsForBar(pct, achieved, target);
 
       const A0   = 0;
-
-      const Aach = Math.max(0, achieved);
-
-      const Amin = (nmin>300? Math.ceil(3.00*target) : Math.ceil((nmin/100)*target));
-
-      const Amax = Math.ceil((Math.min(nmax,300)/100)*target);
-
- 
+      const Aach = round2(Math.max(0, achieved));
+      const Amin = (nmin === '+1') ? round2(achieved + 1) : round2((Math.min(nmin,300)/100) * target);
+      const Amax = round2((Math.min(nmax,300)/100) * target);
 
       const scaleMax = Amax || 1;
-
-      const clampAch = Math.min(Aach, scaleMax);
-
- 
-
       const pos = v => (v/scaleMax)*100;
-
       const left1 = pos(A0);
-
-      const left2 = pos(clampAch);
-
-      const left3 = pos(Amin);
-
- 
+      const left2 = pos(Math.min(Aach, scaleMax));
+      const left3 = pos(Math.min(Amin, scaleMax));
 
       seg1.style.left = `${left1}%`; seg1.style.width = `${Math.max(0, left2-left1)}%`;
-
       seg2.style.left = `${left2}%`; seg2.style.width = `${Math.max(0, left3-left2)}%`;
-
       seg3.style.left = `${left3}%`; seg3.style.width = `${Math.max(0, 100-left3)}%`;
 
- 
-
       t0.style.left  = `${left1}%`;
-
       tA.style.left  = `${left2}%`;
-
       tN1.style.left = `${left3}%`;
-
       tN2.style.left = `100%`;
 
- 
-
       l0.style.left = `${left1}%`; l0.textContent = formatLakhShort(0);
-
-      lA.style.left = `${left2}%`; lA.textContent = formatLakhShort(clampAch);
-
+      lA.style.left = `${left2}%`; lA.textContent = formatLakhShort(Aach);
       lN1.style.left = `${left3}%`; lN1.textContent = formatLakhShort(Amin);
-
-      lN2.style.left = `100%`;      lN2.textContent = (nmax===300 && pct>=300) ? '300%+' : formatLakhShort(Amax);
-
- 
+      lN2.style.left = `100%`;      lN2.textContent = formatLakhShort(Amax);
 
       arrangeLabelCollisions(document.getElementById('barLabels'), [
-
         { el: l0,  leftPercent: left1 },
-
         { el: lA,  leftPercent: left2 },
-
         { el: lN1, leftPercent: left3 },
-
         { el: lN2, leftPercent: 100 }
-
       ]);
-
     }
 
- 
-
-    /* ===== Gauge ===== */
-
+    /* ============================
+       Gauge (unchanged drawing)
+       ============================ */
     const zonesG=document.getElementById('zones');
-
     const legend=document.getElementById('legend');
-
     const pointerGroup=document.getElementById('pointerGroup');
-
     const RADIUS = Math.hypot(80, 20);
-
     const START_DEG = Math.atan2(-20, -80) * 180/Math.PI;
-
     const END_DEG   = Math.atan2(-20,  80) * 180/Math.PI;
-
     function pctToDeg(pct){ const p=Math.max(0,Math.min(300,pct)); return START_DEG + (p/300)*(END_DEG-START_DEG); }
-
     function deg2rad(d){ return (Math.PI/180)*d; }
-
     function xy(angleDeg){ const a=deg2rad(angleDeg); return [ RADIUS*Math.cos(a), RADIUS*Math.sin(a) ]; }
-
     function arcPath(fromDeg,toDeg){
-
       const [sx,sy]=xy(fromDeg), [ex,ey]=xy(toDeg);
-
       const delta=toDeg-fromDeg, largeArc=Math.abs(delta)>180?1:0, sweep=delta>=0?1:0;
-
       return `M ${sx} ${sy} A ${RADIUS} ${RADIUS} 0 ${largeArc} ${sweep} ${ex} ${ey}`;
-
     }
-
     function buildGauge(){
-
       zonesG.innerHTML=''; legend.innerHTML='';
-
       SLABS.forEach((z,idx)=>{
-
         let sPct=Math.max(0,z.min), ePct=Math.min(300,z.max);
-
         if (z.min>=300){ sPct=296; ePct=300; }
-
         const sAng=pctToDeg(sPct), eAng=pctToDeg(ePct);
-
         const path=document.createElementNS('http://www.w3.org/2000/svg','path');
-
         path.setAttribute('d',arcPath(sAng,eAng));
-
         path.setAttribute('stroke',z.color);
-
         path.setAttribute('stroke-width','14');
-
         path.setAttribute('fill','none');
-
         path.style.cursor='pointer';
-
         path.addEventListener('click',()=>showZoneDetails(idx));
-
         zonesG.appendChild(path);
 
- 
-
         const chip=document.createElement('div');
-
         chip.className='chip';
-
         chip.innerHTML=`<span class="dot" style="background:${z.color}"></span>${z.name}`;
-
         chip.onclick=()=>showZoneDetails(idx);
-
         legend.appendChild(chip);
-
       });
-
     }
-
     function rotatePointerTo(pct){ pointerGroup.setAttribute('transform',`rotate(${pctToDeg(pct)})`); }
-
- 
-
     function showZoneDetails(i){
-
       const t=parseINR(document.getElementById('target').value);
-
       const a=parseINR(document.getElementById('achieved').value);
-
       const b=document.getElementById('zoneBody');
-
       const z=SLABS[i];
-
       if (!t){ b.innerHTML='Enter Target & Achieved to compute values.'; return; }
-
-      const minAbs=Math.ceil((z.min/100)*t);
-
-      const incAt95=Math.floor(0.95*t*0.005);
-
-      const incAtMin = (z.min===95 && z.max===100) ? Math.floor(minAbs*0.01) : Math.floor(minAbs*z.rate);
-
-      const gap=Math.max(0,minAbs-a);
-
+      const base95 = round2(0.95*t);
+      const baseInc = round2(base95*0.005);
+      const minAbs = round2((z.min/100)*t);
+      const rate = (z.min===95 && z.max===100) ? 0.01 : (z.min===95 && z.max===95 ? 0.005 : z.rate);
+      const incAtMin = (z.min===95 && z.max===95) ? baseInc : round2(baseInc + (minAbs - base95)*rate);
+      const gap=Math.max(0, round2(minAbs - a));
       let html = `<p><b>${z.name}</b></p>`;
-
-      if (z.min===95 && z.max===100){ html += `<p>Minimum incentive at this zone: <b>${INR.format(incAt95)}</b></p>`; }
-
-      else { html += `<p>Minimum incentive at this zone: <b>${INR.format(incAtMin)}</b></p>`; }
-
+      html += `<p>Minimum incentive at this zone: <b>${INR.format(incAtMin)}</b></p>`;
       html += `<p>Gap to enter this zone: <b class="${gap>0?'red':'green'}">${gap>0?INR.format(gap):'You are in / above this zone'}</b></p>`;
-
       b.innerHTML = html;
-
     }
-
- 
 
     // Rewards
-
     let lastSlabIdx=-1;
-
     const REWARD_EMOJIS=['💪','🎉','👏','🥉','🥈','🥇','🏆','👑'];
-
     function triggerRewardIfSlabAdvanced(pct, achieved, target){
-
       const idx=slabIndexForPct(pct, achieved, target);
-
       if (idx>lastSlabIdx){ lastSlabIdx=idx; runReward(Math.max(idx,0)); }
-
     }
-
     function runReward(idx){
-
       const overlay=document.getElementById('reward');
-
       const stage=document.getElementById('stage');
-
       const emoji=document.getElementById('rewardEmoji');
-
       stage.innerHTML=''; overlay.classList.add('show');
-
       if (idx<=0){
-
         emoji.textContent=REWARD_EMOJIS[0];
-
         const note=document.createElement('div');
-
         note.className='nudge'; note.innerHTML='Keep pushing — almost at the incentive zone!';
-
         note.style.position='absolute'; note.style.left='50%'; note.style.bottom='20%'; note.style.transform='translateX(-50%)';
-
         stage.appendChild(note);
-
         setTimeout(()=> overlay.classList.remove('show'),1600);
-
         return;
-
       }
-
       emoji.textContent=REWARD_EMOJIS[idx] || '🎉';
-
       const colors=['#ff5252','#ffd740','#69f0ae','#40c4ff','#b388ff','#ff8a80'];
-
       const count=60+idx*25;
-
       for(let i=0;i<count;i++){
-
         const d=document.createElement('div');
-
         d.className='confetti';
-
         d.style.left=Math.random()*100+'vw';
-
         d.style.background=colors[i%colors.length];
-
         d.style.transform=`translateY(-10px) rotate(${Math.random()*360}deg)`;
-
         d.style.animationDuration=(2+Math.random()*2)+'s';
-
         d.style.animationDelay=(Math.random()*0.6)+'s';
-
         stage.appendChild(d);
-
       }
-
       setTimeout(()=> overlay.classList.remove('show'),2200);
-
     }
 
- 
-
-    /* ===== Milestones table (Sl., color grading, current incentive tag) ===== */
+    /* ============================
+       Milestones table (Earning Slab, shading, current incentive tag)
+       ============================ */
+    const EARNING_SLAB_LABELS = [
+      '95% of Min Target',
+      '95% of Min Target',
+      '100% of Min Target',
+      '115% of Min Target',
+      '125% of Min Target',
+      '150% of Min Target',
+      '200% of Min Target',
+      '300% of Min Target'
+    ];
+    const SHADE_CLASSES = ['shade1','shade2','shade3','shade4','shade5','shade6','shade7','shade8'];
 
     function buildMilestoneTable(target, achieved){
-
       const body = document.getElementById('milestoneBody');
-
       body.innerHTML = '';
-
       document.getElementById('milestoneNote').textContent =
-
-        `Example Total Target = ${INR.format(target)} | Achievement = ${INR.format(achieved)}`;
-
- 
+        `Example Total Target = ${INR.format(round2(target))} | Achievement = ${INR.format(round2(achieved))}`;
 
       const pct = target ? (achieved/target)*100 : 0;
-
-      const curIdx = slabIndexForPct(pct, achieved, target);   // -1 if below 95
-
- 
+      const curIdx = slabIndexForPct(pct, achieved, target);
 
       const rows = [
-
-        { sl:1, label:'95%',        min:95,  max:95,      type:'exact95',   rate:0.005, shade:'shade1' },
-
-        { sl:2, label:'95–100%',    min:95,  max:100,     type:'range95_100', rate:0.01, shade:'shade2' },
-
-        { sl:3, label:'100–115%',   min:100, max:115,     rate:0.025, shade:'shade3' },
-
-        { sl:4, label:'115–125%',   min:115, max:125,     rate:0.035, shade:'shade4' },
-
-        { sl:5, label:'125–150%',   min:125, max:150,     rate:0.04,  shade:'shade5' },
-
-        { sl:6, label:'150–200%',   min:150, max:200,     rate:0.05,  shade:'shade6' },
-
-        { sl:7, label:'200–300%',   min:200, max:300,     rate:0.06,  shade:'shade7' },
-
-        { sl:8, label:'300%+',      min:300, max:Infinity,rate:0.08,  shade:'shade8' }
-
+        { label:'95%',        min:95,  max:95,      type:'exact95',    rate:0.005 },
+        { label:'95–100%',    min:95,  max:100,     type:'range95_100',rate:0.01 },
+        { label:'100–115%',   min:100, max:115,     rate:0.025 },
+        { label:'115–125%',   min:115, max:125,     rate:0.035 },
+        { label:'125–150%',   min:125, max:150,     rate:0.04 },
+        { label:'150–200%',   min:150, max:200,     rate:0.05 },
+        { label:'200–300%',   min:200, max:300,     rate:0.06 },
+        { label:'300%+',      min:300, max:Infinity,rate:0.08 }
       ];
 
- 
+      const base95 = round2(0.95*target);
+      const baseInc = round2(base95*0.005);
 
       rows.forEach((r,i)=>{
-
         const inThis =
-
           (r.type==='exact95' && isExactly95(achieved, target)) ||
-
           (pct >= r.min && pct < (r.max===Infinity?Number.POSITIVE_INFINITY:r.max));
-
         const crossed =
-
           (r.type==='exact95' && pct > 95) ||
-
           (r.max!==Infinity && pct >= r.max);
 
- 
-
         let nextMilestoneText='', incentiveText='';
-
- 
-
         if (crossed){
-
           nextMilestoneText = 'Already crossed this zone';
-
           incentiveText     = 'Already crossed this zone';
-
         } else if (inThis){
-
-          const rNow = rateFor(pct, achieved, target);
-
-          const inc  = Math.floor(achieved * rNow);
-
+          const inc  = incentiveNew(target, achieved);
           nextMilestoneText = 'In this Zone';
-
           incentiveText     = `${INR.format(inc)} (Current Incentive)`;
-
         } else {
-
-          const minAbs = Math.ceil((r.min/100)*target);
-
-          const gap    = Math.max(0, minAbs - achieved);
-
+          const minAbs = (r.max===Infinity? round2(3.00*target) : round2((r.min/100)*target));
+          const gap    = Math.max(0, round2(minAbs - achieved));
           nextMilestoneText = INR.format(gap);
-
- 
-
-          let minBaseAbs = minAbs;
-
-          let minRate    = r.rate;
-
-          if (r.type==='exact95'){ minRate = 0.005; }
-
-          if (r.max===Infinity){ minBaseAbs = Math.ceil(3.00*target); }
-
-          const minInc   = Math.floor(minBaseAbs * minRate);
-
-          incentiveText  = INR.format(minInc);
-
+          const incMin = (r.type==='exact95')
+            ? baseInc
+            : round2(baseInc + (minAbs - base95)*r.rate);
+          incentiveText  = INR.format(incMin);
         }
-
- 
 
         const tr = document.createElement('tr');
-
-        const tdSl = document.createElement('td'); tdSl.className='slCell'; tdSl.textContent = r.sl;
-
-        const tdMil= document.createElement('td'); tdMil.textContent = nextMilestoneText;
-
-        const tdInc= document.createElement('td'); tdInc.textContent = incentiveText;
-
- 
-
-        // Color only from current slab onwards; crossed rows stay uncolored
+        const tdEarn = document.createElement('td'); tdEarn.textContent = EARNING_SLAB_LABELS[i] || '';
+        const tdMil  = document.createElement('td'); tdMil.textContent  = nextMilestoneText;
+        const tdInc  = document.createElement('td'); tdInc.textContent  = incentiveText;
 
         if (!crossed && (inThis || i >= curIdx) && curIdx >= 0){
-
-          tdMil.classList.add(r.shade);
-
-          tdInc.classList.add(r.shade);
-
+          const shade = SHADE_CLASSES[i] || 'shade8';
+          tdMil.classList.add(shade);
+          tdInc.classList.add(shade);
         }
 
- 
-
-        tr.appendChild(tdSl); tr.appendChild(tdMil); tr.appendChild(tdInc);
-
+        tr.appendChild(tdEarn); tr.appendChild(tdMil); tr.appendChild(tdInc);
         body.appendChild(tr);
-
       });
-
     }
 
- 
-
-    /* ===== Validation + Calc ===== */
-
+    /* ============================
+       Validation + Calculation
+       ============================ */
     function validateInputs(){
-
       const tEl=document.getElementById('target');
-
       const aEl=document.getElementById('achieved');
-
       const tErr=document.getElementById('err-target');
-
       const aErr=document.getElementById('err-achieved');
-
       let ok=true;
-
-      if (!onlyDigits(tEl.value)){ tEl.classList.add('err'); tErr.style.display='block'; ok=false; } else { tEl.classList.remove('err'); tErr.style.display='none'; }
-
-      if (!onlyDigits(aEl.value)){ aEl.classList.add('err'); aErr.style.display='block'; ok=false; } else { aEl.classList.remove('err'); aErr.style.display='none'; }
-
+      const t = parseINR(tEl.value);
+      const a = parseINR(aEl.value);
+      if (!(t>0)){ tEl.classList.add('err'); tErr.style.display='block'; ok=false; } else { tEl.classList.remove('err'); tErr.style.display='none'; }
+      if (!(a>=0)){ aEl.classList.add('err'); aErr.style.display='block'; ok=false; } else { aEl.classList.remove('err'); aErr.style.display='none'; }
       return ok;
-
     }
-
- 
 
     function calculate(){
-
       if (!validateInputs()) return;
 
- 
-
-      const target=parseINR(document.getElementById('target').value);
-
-      const achieved=parseINR(document.getElementById('achieved').value);
-
+      const target = round2(parseINR(document.getElementById('target').value));
+      const achieved = round2(parseINR(document.getElementById('achieved').value));
       const pct = target ? (achieved/target)*100 : 0;
 
- 
-
-      const rNow = rateFor(pct, achieved, target);
-
-      const incentiveNow = Math.floor(achieved * rNow);
-
- 
-
-      const nextAbs = nextMilestoneAbs(pct, achieved, target); // includes 95%→+₹1 rule
-
+      const incentiveNow = incentiveNew(target, achieved);
+      const nextAbs = nextMilestoneAbs(achieved, target);
       let gap=0, atNextIncentive=incentiveNow;
-
       if (nextAbs !== null){
-
-        gap = Math.max(0, nextAbs - achieved);
-
-        const pctNext = (nextAbs/target)*100;
-
-        const rNext   = rateFor(pctNext, nextAbs, target);
-
-        atNextIncentive = Math.floor(nextAbs * rNext);
-
+        gap = Math.max(0, round2(nextAbs - achieved));
+        atNextIncentive = incentiveNew(target, nextAbs);
       }
-
- 
 
       // Results
-
       document.getElementById('results').style.display='block';
-
-      document.getElementById('outPct').innerText=PCT(pct);
-
-      document.getElementById('outIncentive').innerText=INR.format(incentiveNow);
-
+      document.getElementById('outPct').innerText = PCT2(pct);
+      document.getElementById('outIncentive').innerText = INR.format(incentiveNow);
       document.getElementById('outGap').innerText = (nextAbs===null ? '—' : INR.format(gap));
-
       document.getElementById('outNextInc').innerText = INR.format(atNextIncentive);
 
- 
-
       // Near-miss 93–95
-
       const miss=document.getElementById('nearMiss');
-
-      if (pct>=93 && pct<95){ miss.style.display='block'; document.getElementById('missAmt').innerText=INR.format(Math.ceil(0.95*target-achieved)); }
-
+      const base95= round2(0.95*target);
+      if (pct>=93 && pct<95){ miss.style.display='block'; document.getElementById('missAmt').innerText=INR.format(round2(base95 - achieved)); }
       else miss.style.display='none';
 
- 
-
       // Progress bar
-
       buildAbsoluteProgress(target, achieved);
 
- 
-
       // Gauge pointer
-
       rotatePointerTo(pct);
 
- 
-
       // Rewards
-
       triggerRewardIfSlabAdvanced(pct, achieved, target);
 
- 
-
       // Milestones table
-
       buildMilestoneTable(target, achieved);
-
     }
-
- 
 
     function initializeApp(){
-
       attachMask('target','err-target');
-
       attachMask('achieved','err-achieved');
-
       buildGauge();
-
       document.getElementById('btnCalc').addEventListener('click', calculate);
-
       if ('serviceWorker' in navigator){
-
         navigator.serviceWorker.register('./service-worker.js');
-
       }
-
     }
 
- 
-
     document.addEventListener('DOMContentLoaded', () => {
-
       if (!PASSWORD){
-
         document.getElementById('appRoot').style.visibility = 'visible';
-
         initializeApp();
-
         return;
-
       }
-
       if (sessionStorage.getItem(SESSION_KEY) === '1'){
-
         document.getElementById('appRoot').style.visibility = 'visible';
-
         initializeApp();
-
       } else {
-
         showSimpleGate();
-
       }
-
     });
-
   </script>
-
 </body>
-
 </html>
